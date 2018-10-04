@@ -1,0 +1,58 @@
+object property groups:
+sssim_obj (type: SSSIMObject)
+    - use sssim
+    - object_type
+    - show_info
+    - center
+    #not used for surfaces:
+    - mass_mantissa
+    - mass_exp
+    
+sssim_orbit (type: SSSIMOrbit)
+    - eccentricity
+    - distance_mantissa
+    - distance_exp
+    - inclination
+    - asc_node
+    - arg_periapsis
+    - time_offset
+    - use_user_period
+    - use_frames
+    - user_period_seconds
+    - user_period_frames
+    
+sssim_rotation (type: SSSIMRotation)
+    - use_rotation
+    - use_frames
+    - user_period_frames
+    - user_period_seconds
+    - axis_tilt
+    - axis_direction
+    - relative_to_orbit
+    
+sssim_calc (type: SSSIMCalculation)
+    - use_driver
+    - cyclic
+    - frame_start
+    - frame_end
+    - frame_step
+    (- motion_path <- not useful)
+    
+sssim_surface (type: SSSIMSurface)
+    - calc_radius
+    # used internally:
+    (- object_proportions)
+    (- original_scale)
+    - radius_mantissa
+    - radius_exp
+
+TODO:
+- help text, activate for every panel with (?) in upper corner
+- rework forum text
+- option: "advanced settings"
+
+LINKS:
+http://www-spof.gsfc.nasa.gov/stargaze/Smap.htm
+http://www-spof.gsfc.nasa.gov/stargaze/Skeplaws.htm
+
+http://en.wikipedia.org/wiki/Orbital_elements
