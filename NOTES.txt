@@ -1,10 +1,17 @@
-object property groups:
+Property groups (in properties.py):
+sssim_scn (type: SSSIMScene)
+    - sim_time
+    - time_exp
+    - length_exp
+    - planet_size_mult
+    - draw_orbit
+        
 sssim_obj (type: SSSIMObject)
     - use sssim
     - object_type
     - show_info
     - center
-    #not used for surfaces:
+    # not used for surfaces:
     - mass_mantissa
     - mass_exp
     
@@ -48,8 +55,7 @@ sssim_surface (type: SSSIMSurface)
 
 TODO:
 - help text, activate for every panel with (?) in upper corner
-- rework forum text
-- option: "advanced settings"
+- option: "advanced settings"?
 
 LINKS:
 http://www-spof.gsfc.nasa.gov/stargaze/Smap.htm

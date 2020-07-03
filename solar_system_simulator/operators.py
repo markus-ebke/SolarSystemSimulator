@@ -18,9 +18,9 @@
 
 # <pep8 compliant>
 
+from itertools import chain
 
 import bpy
-
 from bpy.props import (
     BoolProperty,
     IntProperty,
@@ -28,47 +28,67 @@ from bpy.props import (
     StringProperty,
     EnumProperty)
 
-from math import ceil
 from .calculation import eval_planet_orbit, eval_planet_rotation
 
 
-### Adding/Removing relations between objects ###
+# =============================================================================
+# Add/remove relations between objects
+# =============================================================================
 
 def add_driver_loc(obj, scn):
     """Add or adjust the location-drivers for orbit"""
     loc_list = obj.driver_add("location")  # X-, Y- and Z-Driver in list
 
-    # location driver:
     for driver_fcurve in loc_list:
         index = driver_fcurve.array_index
         driver = driver_fcurve.driver
-        driver.show_debug_info = True
 
-        driver.type = "SCRIPTED"
-        expr = "eval_planet_orbit('{0}', '{1}', {2})"
-        driver.expression = expr.format(scn.name, obj.name, index)
+        # clear existing variables, if any
+        for var in driver.variables.values():
+            driver.variables.remove(var)
 
-    return "location driver added/adjusted"
+        # new variable: scene data
+        var = driver.variables.new()
+        var.name = "scn_name"
+        var.targets[0].id_type = 'SCENE'
+        var.targets[0].id = scn
+        var.targets[0].data_path = "name"
+
+        # setup scripted expression
+        driver.type = 'SCRIPTED'
+        driver.use_self = True
+        expr = "eval_planet_orbit(self, scn_name, {})".format(index)
+        driver.expression = expr
 
 
 def add_driver_rot(obj, scn):
-    """Add or adjust the rotation-driver"""
+    """Add or adjust the rotation-drivers"""
     # Have to use a different mode because of rotation around Z
     obj.rotation_mode = 'ZYX'
-    # X-, Y- and Z-Driver in list
+    # X-, Y- and Z-driver in list
     rot_list = obj.driver_add("rotation_euler")
 
     # rotation driver:
     for driver_fcurve in rot_list:
         index = driver_fcurve.array_index
         driver = driver_fcurve.driver
-        driver.show_debug_info = True
 
-        driver.type = "SCRIPTED"
-        expr = "eval_planet_rotation('{0}', '{1}', {2})"
-        driver.expression = expr.format(scn.name, obj.name, index)
+        # clear existing variables, if any
+        for var in driver.variables.values():
+            driver.variables.remove(var)
 
-    return "rotation driver added/adjusted"
+        # new variable: scene data
+        var = driver.variables.new()
+        var.name = "scn_name"
+        var.targets[0].id_type = 'SCENE'
+        var.targets[0].id = scn
+        var.targets[0].data_path = "name"
+
+        # setup scripted expression
+        driver.type = 'SCRIPTED'
+        driver.use_self = True
+        expr = "eval_planet_rotation(self, scn_name, {})".format(index)
+        driver.expression = expr
 
 
 def add_orbit_constraint(child_obj, parent_obj):
@@ -108,21 +128,13 @@ def add_surface(child_obj, parent_obj):
 
 
 def remove_driver_loc(obj):
-    """Remove the location-driver (= Orbit)"""
-    rem_loc = obj.driver_remove("location")
-    if rem_loc:
-        return "location driver removed"
-    else:
-        return "no location driver to remove"
+    """Remove the location-driver (= orbit)"""
+    return obj.driver_remove("location")
 
 
 def remove_driver_rot(obj):
     """Remove the rotation-driver"""
-    rem_rot = obj.driver_remove("rotation_euler")
-    if rem_rot:
-        return "rotation driver removed"
-    else:
-        return "no rotation driver to remove"
+    return obj.driver_remove("rotation_euler")
 
 
 def remove_orbit_constraint(obj):
@@ -130,9 +142,11 @@ def remove_orbit_constraint(obj):
     orbitcon = obj.constraints.get("ORBIT")
     if orbitcon:
         obj.constraints.remove(orbitcon)
-        return "Orbit Constraint removed from {}".format(obj.name)
+        msg = "Orbit Constraint removed from {}".format(obj.name)
     else:
-        return "No Orbit Constraint to remove from {}".format(obj.name)
+        msg = "No Orbit Constraint to remove from {}".format(obj.name)
+
+    return msg
 
 
 def remove_surface(child_obj):
@@ -142,24 +156,28 @@ def remove_surface(child_obj):
 
     if parent_obj:
         pname = parent_obj.name
-        return "Surface {} removed from {}".format(child_obj.name, pname)
+        msg = "Surface {} removed from {}".format(child_obj.name, pname)
     else:
-        return "Surface {} had no parent".format(child_obj.name)
+        msg = "Surface {} had no parent".format(child_obj.name)
+
+    return msg
 
 
-### FCurve stuff ###
+# =============================================================================
+# F-Curve stuff
+# =============================================================================
 
 def get_fcurve(fcurves, search_data_path, array_index=-1):
-    """Find in list fcurves the fcurve with given data_path (and index)"""
+    """Find in list fcurves the F-Curve with given data_path (and index)"""
     for fc in fcurves:
         if fc.data_path == search_data_path:
-            if array_index == -1 or fc.array_index == array_index:
+            if array_index in (-1, fc.array_index):
                 return fc
     return None
 
 
 def has_location_fcurve(obj):
-    """Find out if the object has a location (=orbit) fcurve."""
+    """Find out if the object has a location (=orbit) F-Curve"""
     if obj.animation_data:
         if obj.animation_data.action:
             fcurves = obj.animation_data.action.fcurves
@@ -170,7 +188,7 @@ def has_location_fcurve(obj):
 
 
 def has_rotation_fcurve(obj):
-    """Find out if the object has a rotation fcurve."""
+    """Find out if the object has a rotation F-Curve"""
     if obj.animation_data:
         if obj.animation_data.action:
             fcurves = obj.animation_data.action.fcurves
@@ -181,48 +199,40 @@ def has_rotation_fcurve(obj):
 
 
 def key_insert(fcurve, start, end, step, get_value):
-    """Insert keys and refining the curve (adjusts the handles).
+    """Insert keys in given range into the F-Curve
+
     fcurve = F-Curve where the keys are added
-    start, end, step = where to insert the keys
-    get_value(frame), function which returns the value at the given frame
+    start, end, step = where to insert the keys (along x-axis)
+    get_value(frame), function which returns the y-value at the given frame
     returns number of inserted keyframes
     """
-    frame_list = list(range(start, end, step))
-    frame_list.append(end)
+    frames = chain(range(start, int(end), step), [end])
 
-    for frame in frame_list:
-        # time difference for calculating the previous and next position
-        delta = 0.4
-        frame_pre = frame - delta * step
-        frame_past = frame + delta * step
-
-        # y-coordinates of left handle, key, right handle
-        val_pre = get_value(frame_pre)
+    loops = 0
+    for frame in frames:
         val = get_value(frame)
-        val_past = get_value(frame_past)
+        fcurve.keyframe_points.insert(frame, val)
 
-        key = fcurve.keyframe_points.insert(frame, val)
-        key.handle_left_type = 'FREE'
-        key.handle_left = (frame_pre, val_pre)
-        key.handle_right_type = 'FREE'
-        key.handle_right = (frame_past, val_past)
+        loops += 1
 
-    return len(frame_list)
+    return loops
 
 
-### Operators ###
+# =============================================================================
+# Operators
+# =============================================================================
 
-class AddEvalTimeFCurve(bpy.types.Operator):
-    """Add a Linear F-Curve to Evaluation Time"""
-    bl_idname = "scene.add_eval_time_fcurve"
-    bl_label = "Add Time F-Curve"
+class SCENE_OT_add_sim_time_fcurve(bpy.types.Operator):
+    """Add a linear F-Curve to simulation time"""
+    bl_idname = "scene.add_sim_time_fcurve"
+    bl_label = "Add time F-Curve"
 
     @classmethod
     def poll(cls, context):
-        # if eval_time is controlled by fcurve -> return False
+        # if sim_time is controlled by fcurve -> return False
         anim_data = context.scene.animation_data
         if anim_data and anim_data.action:
-            if get_fcurve(anim_data.action.fcurves, "sssim_scn.eval_time"):
+            if get_fcurve(anim_data.action.fcurves, "sssim_scn.sim_time"):
                 return False
         return True
 
@@ -233,30 +243,30 @@ class AddEvalTimeFCurve(bpy.types.Operator):
             scn.animation_data_create()
 
         anim_data = scn.animation_data
-        act = bpy.data.actions.new("Evaluation_Time")
+        act = bpy.data.actions.new("Simulation_Time")
         anim_data.action = act
-        time_curve = act.fcurves.new(data_path="sssim_scn.eval_time")
+        time_curve = act.fcurves.new(data_path="sssim_scn.sim_time")
 
         fmod = time_curve.modifiers.new("GENERATOR")
         fmod.mode = "POLYNOMIAL"
         fmod.poly_order = 1
-        fmod.coefficients = (-1, 1)
+        slope = scn.render.fps_base / scn.render.fps
+        fmod.coefficients = (-slope, slope)  # first frame: time = 0
         return {'FINISHED'}
 
 
-# Create and use a fcurves for the simualation instead of drivers
-class SSSimToFCurve(bpy.types.Operator):
-    """Bake the Simulation to F-Curves for Location and/or Rotation"""
+# create and use F-Curves for the simualation instead of drivers
+class OBJECT_OT_sssim_to_fcurve(bpy.types.Operator):
+    """Bake the simulation to F-Curves for location and/or rotation"""
     bl_idname = "object.sssim_to_fcurve"
     bl_label = "SSSim to F-Curve"
 
     @classmethod
     def poll(cls, context):
         obj = context.object
-        # Is there is an active object
         if obj:
             simcalc = obj.sssim_calc
-            # Can we bake something
+            # can we bake something?
             return simcalc.calc_orbit or simcalc.calc_rotation
         return False
 
@@ -264,26 +274,22 @@ class SSSimToFCurve(bpy.types.Operator):
         scn = context.scene
         obj = context.object
 
-        # There must be a eval_time fcurve
-        if bpy.ops.scene.add_eval_time_fcurve.poll():
-            msg = "No Evaluation Time F-Curve found, control the scene tab"
+        # there must be a sim_time F-Curve
+        if bpy.ops.scene.add_sim_time_fcurve.poll():
+            msg = "No simulation time F-Curve found, check the scene tab"
             self.report({'ERROR'}, msg)
             return {'CANCELLED'}
 
         scn_act = scn.animation_data.action
-        eval_time_fcurve = get_fcurve(scn_act.fcurves, "sssim_scn.eval_time")
+        sim_time_fcurve = get_fcurve(scn_act.fcurves, "sssim_scn.sim_time")
         time_multiply = scn.sssim_scn.time_mult
 
-        # time_func(frame) returns the time at this frame
-        def time_func(frame):
-            return eval_time_fcurve.evaluate(frame) * time_multiply
-
-        # Set up animation data if needed
+        # set up animation data if needed
         if obj.animation_data is None:
             obj.animation_data_create()
         anim_data = obj.animation_data
 
-        # Use existing action to keep everything clean
+        # use existing action to keep everything clean
         previous = bpy.data.actions.get("SSSim_%s_Action" % obj.name)
         if previous:
             act = previous
@@ -292,12 +298,14 @@ class SSSimToFCurve(bpy.types.Operator):
 
         anim_data.action = act
 
+        # time_func(frame) returns the time at this frame
+        def time_func(frame):
+            return sim_time_fcurve.evaluate(frame) * time_multiply
+
         simcalc = obj.sssim_calc
         if simcalc.calc_orbit:
-            #print("Calculating Orbit:......", end="  ")
             self.orbit_to_fcurve(act, scn, obj, time_func)
         if simcalc.calc_rotation:
-            #print("Calculating Rotation:...", end="  ")
             self.rotation_to_fcurve(act, scn, obj, time_func)
 
         return {'FINISHED'}
@@ -311,10 +319,9 @@ class SSSimToFCurve(bpy.types.Operator):
         for index in range(0, 3):
             # value_func(frame) returns the value at this frame
             def value_func(frame):
-                return eval_planet_orbit(scn.name, obj.name, index,
-                                         get_time(frame))
+                return eval_planet_orbit(obj, scn.name, index, get_time(frame))
 
-            # Remove the existing curve if any
+            # remove existing F-Curve if any
             fc = get_fcurve(act.fcurves, "location", index)
             if fc:
                 act.fcurves.remove(fc)
@@ -329,19 +336,20 @@ class SSSimToFCurve(bpy.types.Operator):
 
     def rotation_to_fcurve(self, act, scn, obj, get_time):
         def value_func(time):
-            return eval_planet_rotation(scn.name, obj.name, 2, get_time(time))
+            return eval_planet_rotation(obj, scn.name, 2, get_time(time))
 
-        # Calc rotation around z-axis only, index = 2
+        # calculate rotation around z-axis only, index = 2
         # rotation of x- and y-axis stay fixed
-        rot = eval_planet_rotation(scn.name, obj.name, index=None, time=0)
+        rot = eval_planet_rotation(obj, scn.name, index=None, time=0)
         rot_x, rot_y = rot[0], rot[1]
         obj.rotation_euler.x = rot_x
         obj.rotation_euler.y = rot_y
 
-        # Remove the existing z-axis curve if any
+        # remove existing z-axis curve if any
         fc = get_fcurve(act.fcurves, "rotation_euler", 2)
         if fc:
             act.fcurves.remove(fc)
+
         fc = act.fcurves.new(data_path="rotation_euler", index=2)
         fc.extrapolation = 'LINEAR'
 
@@ -359,8 +367,8 @@ class SSSimToFCurve(bpy.types.Operator):
         print("Created {:3} keyframes for rotation".format(n))
 
 
-class SSSimClearFCurve(bpy.types.Operator):
-    """Clear Location and Rotation F-Curves"""
+class OBJECT_OT_sssim_clear_fcurve(bpy.types.Operator):
+    """Clear location and rotation F-Curves"""
     bl_idname = "object.sssim_clear_fcurve"
     bl_label = "Clear SSSim F-Curve"
 
@@ -385,13 +393,13 @@ class SSSimClearFCurve(bpy.types.Operator):
         return {'FINISHED'}
 
 
-class UpdateSSSimDrivers(bpy.types.Operator):
+class SCENE_OT_update_sssim_drivers(bpy.types.Operator):
     """Update the simulation drivers, neccessary after file reload"""
     bl_idname = "scene.update_sssim_drivers"
     bl_label = "Update Drivers"
 
     def execute(self, context):
-        # Update driver namespace
+        # update driver namespace
         bpy.app.driver_namespace["eval_planet_orbit"] = eval_planet_orbit
         bpy.app.driver_namespace["eval_planet_rotation"] = eval_planet_rotation
 
@@ -417,79 +425,72 @@ class UpdateSSSimDrivers(bpy.types.Operator):
         return {'FINISHED'}
 
 
-### Operators in Toolbar ###
+# =============================================================================
+# Operators in 3D Viewport toolbar
+# =============================================================================
 
-def is_selected_valid_center(obj):
-    if obj and obj.select:
-        simobj = obj.sssim_obj
-        if simobj.use_sssim and simobj.object_type != 'SURFACE':
-            return True
-    return False
-
-
-class SSSimCreateCenter(bpy.types.Operator):
+class OBJECT_OT_sssim_create_center(bpy.types.Operator):
     bl_idname = "object.sssim_create_center"
     bl_label = "Create Center"
-    bl_description = "Create a Center Object for the Solar System"
+    bl_description = "Create a central object for the Solar System"
 
-    center_name = StringProperty(
+    center_name: StringProperty(
         name="Center Name",
-        description="Name of the center object",
+        description="Name of the center.",
         default="Center")
 
-    mass_mantissa = FloatProperty(
+    mass_mantissa: FloatProperty(
         name="Mass (kg)",
-        description="Mass of the Center Object (in kg)",
+        description="Mass of the center (in kilogram).",
         soft_min=0.001, soft_max=1000, default=1)
 
-    mass_exp = IntProperty(
+    mass_exp: IntProperty(
         name="Mass Exponent",
-        description="Exponent for Mass",
+        description="Base-10 exponent of the mass.",
         soft_min=0, soft_max=50, default=27)
 
     # Rotation
-    use_rotation = BoolProperty(
+    use_rotation: BoolProperty(
         name="Use Rotation",
-        description="The Center rotates",
+        description="Make the center rotate around its axis.",
         default=True)
 
-    rotation_period = FloatProperty(
+    rotation_period: FloatProperty(
         name="Rotation Period (in seconds)",
-        description="Time for the Planet to Rotate around its Axis in Seconds",
+        description="Time for one to rotation in seconds.",
         soft_min=1, default=86400)
 
     # Surfaces
-    with_surface = BoolProperty(
+    with_surface: BoolProperty(
         name="Create Surface")
 
-    mesh_type = EnumProperty(
+    mesh_type: EnumProperty(
         name="Mesh Type",
-        items=(('UV_SPHERE', "UV Sphere", "UV Sphere surface"),
+        items=(('UV_SPHERE', "UV Sphere", "UV sphere surface"),
                ('ICOSPHERE', "Icosphere", "Icosphere surface"),
                ),
-        description=("Type of Mesh, UV-Spheres are better for unwrapping, "
-                     "Icospheres have an even distribution of vertices"),
+        description=("Type of mesh, UV spheres are better for unwrapping, "
+                     "Icospheres have an even distribution of vertices."),
         default='ICOSPHERE')
 
-    subdivisions = IntProperty(
+    subdivisions: IntProperty(
         name="Subdivisions",
-        description="1 = coarse Mesh, 7 = dense but round Mesh",
+        description="1 = coarse mesh, 7 = dense but round mesh",
         min=1, max=7, default=3)
 
-    radius_mantissa = FloatProperty(
+    radius_mantissa: FloatProperty(
         name="Radius (in km)",
         soft_min=0.001, soft_max=1000, default=0.5)
 
-    radius_exp = IntProperty(
+    radius_exp: IntProperty(
         name="Radius Exponent",
-        description="The Radius Exponent",
+        description="Base-10 exponent of the radius.",
         soft_min=0, soft_max=8, default=6)
 
     def execute(self, context):
         # create emtpy
         center = bpy.data.objects.new(self.center_name, None)
-        scn = context.scene
-        scn.objects.link(center)
+        context.collection.objects.link(center)
 
         # set up center properties
         simobj = center.sssim_obj
@@ -502,7 +503,7 @@ class SSSimCreateCenter(bpy.types.Operator):
         simrot = center.sssim_rotation
         simrot.use_rotation = self.use_rotation
         simrot.use_frames = False
-        simrot.user_period_seconds = self.rotation_period
+        simrot.period_seconds = self.rotation_period
 
         if self.with_surface:
             # create a surface for the center
@@ -514,8 +515,8 @@ class SSSimCreateCenter(bpy.types.Operator):
                 radius_exp=self.radius_exp)
 
         # make the center object the active object
-        center.select = True
-        scn.objects.active = center
+        center.select_set(True)
+        context.view_layer.objects.active = center
 
         return {'FINISHED'}
 
@@ -547,84 +548,83 @@ class SSSimCreateCenter(bpy.types.Operator):
         sub.prop(self, "radius_exp", slider=True)
 
 
-class SSSimCreatePlanet(bpy.types.Operator):
-    """Create a Planet orbiting the selected Planet or Center"""
+class OBJECT_OT_sssim_create_planet(bpy.types.Operator):
+    """Create a planet orbiting the active planet or center"""
     bl_idname = "object.sssim_create_planet"
     bl_label = "Create Planet"
 
-    center_name = StringProperty(
+    center_name: StringProperty(
         name="Center",
-        description="Name of the Center Object")
+        description="Name of the center object.")
 
-    planet_name = StringProperty(
+    planet_name: StringProperty(
         name="Planet Name",
-        description="Name of the new Planet",
-        default="planet")
+        description="Name of the new planet.",
+        default="Planet")
 
-    mass_mantissa = FloatProperty(
+    mass_mantissa: FloatProperty(
         name="Mass (kg)",
-        description="Mass of the Planet Object (in kg)",
+        description="Mass of the planet in kilogram.",
         soft_min=0.001, soft_max=1000, default=1)
 
-    mass_exp = IntProperty(
+    mass_exp: IntProperty(
         name="Mass Exponent",
-        description="Exponent for Mass",
+        description="Base-10 exponent of the mass.",
         soft_min=0, soft_max=50, default=24)
 
     # Orbit
-    distance_mantissa = FloatProperty(
+    distance_mantissa: FloatProperty(
         name="Distance (in km)",
-        description="Distance to the Center Object in kilometer",
+        description="Distance to the center object in kilometers.",
         soft_min=0, soft_max=1000, default=10)
 
-    distance_exp = IntProperty(
+    distance_exp: IntProperty(
         name="Length Exponent",
-        description="Exponent of the Distance",
+        description="Base-10 exponent of the distance.",
         soft_min=0, soft_max=12, default=6)
 
     # Rotation
-    use_rotation = BoolProperty(
+    use_rotation: BoolProperty(
         name="Use Rotation",
-        description="The Center rotates",
+        description="If the planet rotates.",
         default=True)
 
-    rotation_period = FloatProperty(
+    rotation_period: FloatProperty(
         name="Rotation Period (in seconds)",
-        description="Time for the Planet to Rotate around its Axis in Seconds",
+        description="Time for one to rotation in seconds.",
         soft_min=1, default=86400)
 
     # Surface
-    with_surface = BoolProperty(
+    with_surface: BoolProperty(
         name="Create Surface")
 
-    mesh_type = EnumProperty(
+    mesh_type: EnumProperty(
         name="Mesh Type",
-        items=(('UV_SPHERE', "UV Sphere", "UV Sphere surface"),
+        items=(('UV_SPHERE', "UV Sphere", "UV sphere surface"),
                ('ICOSPHERE', "Icosphere", "Icosphere surface"),
                ),
-        description=("Type of Mesh, UV-Spheres are better for unwrapping, "
-                     "Icospheres have an even distribution of vertices"),
+        description=("Type of mesh, UV spheres are better for unwrapping, "
+                     "Icospheres have an even distribution of vertices."),
         default='ICOSPHERE')
 
-    subdivisions = IntProperty(
+    subdivisions: IntProperty(
         name="Subdivisions",
-        description="1 = coarse Mesh, 7 = dense but round Mesh",
+        description="1 = coarse mesh, 7 = dense but round mesh.",
         min=1, max=7, default=3)
 
-    radius_mantissa = FloatProperty(
+    radius_mantissa: FloatProperty(
         name="Radius (in km)",
         soft_min=0.001, soft_max=1000, default=0.5)
 
-    radius_exp = IntProperty(
+    radius_exp: IntProperty(
         name="Radius Exponent",
-        description="The Radius Exponent",
+        description="Base-10 exponent of the radius.",
         soft_min=0, soft_max=8, default=6)
 
     def execute(self, context):
-        # Create Emtpy object for planet
+        # create emtpy object for planet
         planet = bpy.data.objects.new(self.planet_name, None)
-        scn = context.scene
-        scn.objects.link(planet)
+        context.collection.objects.link(planet)
 
         # set up orbit properties
         simobj = planet.sssim_obj
@@ -644,7 +644,7 @@ class SSSimCreatePlanet(bpy.types.Operator):
         simrot = planet.sssim_rotation
         simrot.use_rotation = self.use_rotation
         simrot.use_frames = False
-        simrot.user_period_seconds = self.rotation_period
+        simrot.period_seconds = self.rotation_period
 
         if self.with_surface:
             # use our create_surface operator,
@@ -656,16 +656,15 @@ class SSSimCreatePlanet(bpy.types.Operator):
                 radius_exp=self.radius_exp)
 
         # make the planet object the active object
-        planet.select = True
-        scn.objects.active = planet
+        planet.select_set(True)
+        context.view_layer.objects.active = planet
 
         return {'FINISHED'}
 
     def invoke(self, context, event):
         # Try to use the active object as center
         obj = context.object
-        if obj and obj.select:
-            # the user really means this object
+        if obj:
             simobj = obj.sssim_obj
             if simobj.use_sssim:
                 # is a valid simulation object
@@ -710,36 +709,36 @@ class SSSimCreatePlanet(bpy.types.Operator):
         sub.prop(self, "radius_exp", slider=True)
 
 
-class SSSimCreateSurface(bpy.types.Operator):
-    """Create a Surface for the selected Planet or Center"""
+class OBJECT_OT_sssim_create_surface(bpy.types.Operator):
+    """Create a surface for the active planet or center"""
     bl_idname = "object.sssim_create_surface"
     bl_label = "Create Surface"
 
-    parent_name = StringProperty(
+    parent_name: StringProperty(
         name="Parent Name",
-        description="Name of the Parent Object")
+        description="Name of the parent center or planet object.")
 
-    mesh_type = EnumProperty(
+    mesh_type: EnumProperty(
         name="Mesh Type",
-        items=(('UV_SPHERE', "UV Sphere", "UV Sphere surface"),
+        items=(('UV_SPHERE', "UV Sphere", "UV sphere surface"),
                ('ICOSPHERE', "Icosphere", "Icosphere surface"),
                ),
-        description=("Type of Mesh, UV-Spheres are better for unwrapping, "
-                     "Icospheres have an even distribution of vertices"),
+        description=("Type of Mesh, UV spheres are better for unwrapping, "
+                     "Icospheres have an even distribution of vertices."),
         default='ICOSPHERE')
 
-    subdivisions = IntProperty(
+    subdivisions: IntProperty(
         name="Subdivisions",
-        description="1 = coarse Mesh, 7 = dense but round Mesh",
+        description="1 = coarse mesh, 7 = dense but round mesh.",
         min=1, max=7, default=3)
 
-    radius_mantissa = FloatProperty(
+    radius_mantissa: FloatProperty(
         name="Radius (in km)",
         soft_min=0.001, soft_max=1000, default=0.5)
 
-    radius_exp = IntProperty(
+    radius_exp: IntProperty(
         name="Radius Exponent",
-        description="The Radius Exponent",
+        description="Base-10 exponent of the radius.",
         soft_min=0, soft_max=8, default=6)
 
     def execute(self, context):
@@ -776,10 +775,9 @@ class SSSimCreateSurface(bpy.types.Operator):
         return {'FINISHED'}
 
     def invoke(self, context, event):
-        # Try to use the active object as parent
+        # try to use the active object as parent
         obj = context.object
-        if obj and obj.select:
-            # the user really means this object
+        if obj:
             simobj = obj.sssim_obj
             if simobj.use_sssim:
                 # is a valid simulation object
@@ -806,40 +804,25 @@ class SSSimCreateSurface(bpy.types.Operator):
         sub.prop(self, "radius_exp", slider=True)
 
 
-class SSSimBakeAll(bpy.types.Operator):
-    """Bake all Solar System Simulations in the current scene"""
+class OBJECT_OT_sssim_bake_all(bpy.types.Operator):
+    """Bake all simulations in the current scene"""
     bl_idname = "scene.sssim_bake_all"
     bl_label = "SSSim Bake All"
-
-    override = BoolProperty(
-        name="Override",
-        default=True)
-    keyframes = IntProperty(
-        name="Keyframes",
-        description="Aim for this number of keyframes",
-        min=4, soft_max=1000, default=100)
 
     def execute(self, context):
         scn = context.scene
         # handy name for the operator
         sim_bake = bpy.ops.object.sssim_to_fcurve
-        # The operator works on the active object, we will override the context
+        # the operator works on the active object, we will override the context
         # but first we need a copy of the current context
         override_context = bpy.types.Context.copy(context)
 
-        # Gather all valid Simulation objects in the current scene
-        simobj = [obj for obj in scn.objects if obj.sssim_obj.use_sssim]
         n = 0
-        for obj in simobj:
-            simcalc = obj.sssim_calc
+        for obj in scn.objects:
+            if not obj.sssim_obj.use_sssim:
+                continue
 
-            if self.override:
-                # adjust the stepsize to get the wanted number of keyframes
-                start = simcalc.real_frame_start
-                end = simcalc.real_frame_end
-                simcalc.frame_step = ceil((end - start) / self.keyframes) + 1
-
-            # Deactivate Driver if neccessary
+            # deactivate Driver if neccessary
             if obj.sssim_calc.use_driver:
                 obj.sssim_calc.use_driver = False
 
@@ -850,29 +833,17 @@ class SSSimBakeAll(bpy.types.Operator):
                 result = sim_bake(override_context)
                 n += 1
 
-                # Check if everything was OK
+                # check if everything was OK
                 if result == {'CANCELLED'}:
                     print("Object {} failed to bake".format(obj.name))
                     return {'CANCELLED'}
+
         print("Baked {} objects".format(n))
         return {'FINISHED'}
 
-    def invoke(self, context, event):
-        wm = context.window_manager
-        return wm.invoke_props_dialog(self, width=300)
 
-    def draw(self, context):
-        layout = self.layout
-        layout.label("Simulation objects have their own frame step for baking.")
-        layout.label("Override indiviual settings to get the same number of")
-        layout.label("keyframes for every object?")
-        row = layout.row()
-        row.prop(self, "override")
-        row.prop(self, "keyframes")
-
-
-class SSSimBakeClear(bpy.types.Operator):
-    """Clear all Solar System Simulations Bakes and use Drivers again"""
+class OBJECT_OT_sssim_bake_clear(bpy.types.Operator):
+    """Clear all baked simulations and use drivers again"""
     bl_idname = "scene.sssim_bake_clear"
     bl_label = "SSSim Bake Clear"
 
@@ -881,14 +852,16 @@ class SSSimBakeClear(bpy.types.Operator):
         sim_clear = bpy.ops.object.sssim_clear_fcurve
         override = bpy.types.Context.copy(context)
 
-        simobj = [obj for obj in scn.objects if obj.sssim_obj.use_sssim]
-        n = 0
-        for obj in simobj:
+        num_obj = 0
+        for obj in scn.objects:
+            if not obj.sssim_obj.use_sssim:
+                continue
+
             override['object'] = obj
             if sim_clear.poll(override):
                 sim_clear(override)
-                n += 1
+                num_obj += 1
 
             obj.sssim_calc.use_driver = True
-        print("Cleared Bake of {} objects".format(n))
+        print("Cleared Bake of {} objects".format(num_obj))
         return {'FINISHED'}

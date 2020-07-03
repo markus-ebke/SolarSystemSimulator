@@ -18,9 +18,9 @@
 
 # <pep8 compliant>
 
+from math import pi, sin, cos, acos, sqrt
 import bpy
 from mathutils import Vector, Euler
-from math import pi, sin, cos, acos, sqrt
 
 G = 6.673e-11  # Gravitational constant
 
@@ -37,84 +37,85 @@ def orbital_period(axis, mass1, mass2):
     return sqrt((4 * pi ** 2 * axis ** 3) / (G * (mass1 + mass2)))
 
 
-def true_anomaly(time, T, e=0, time_offset=0):
+def true_anomaly(time, period, ecc=0, time_offset=0):
     """Calc the true anomaly (the angle since the nearest point of the orbit)
 
     time = time in seconds
-    T = Orbital Period in seconds
-    e = eccentricity of the orbit, e = 0: circular orbit, 0 < e < 1: elliptical
+    period = Orbital Period in seconds
+    ecc = eccentricity of the orbit, ecc = 0: circular, 0 < ecc < 1: elliptical
     time_offset = offset of the initial angle, in range 0 - 1,
-                  offset * T = starting time in seconds if time=0
+                  offset * period = starting time in seconds if time=0
     return angle between 0 and 2pi.
     """
-    if T == 0:
-        # Planet cannot have an orbit
+    if period == 0:
+        # planet cannot have an orbit
         # => return static position dependent on offset
         return 2 * pi * time_offset
 
     # mean anomaly = "angle" travelled, in range 0 - 2*pi
-    mean_anomaly = 2 * pi * (((time / T) + time_offset) % 1)
+    mean_anomaly = 2 * pi * (((time / period) + time_offset) % 1)
 
-    if e == 0:
+    if ecc == 0:
         # circle, no fancy stuff here
         return mean_anomaly
-    else:
-        # the true anomaly is the "angle" travelled (as seen from center)
-        # since the nearest point (periapsis) of the orbit
 
-        # mean_anomaly (in rad)-> eccentric anomaly (rad)-> true anomaly (rad)
-        # calculate the eccentric anomaly according to a formular found at
-        # http://www-spof.gsfc.nasa.gov/stargaze/Smotion.htm
-        eccentric_anomaly = mean_anomaly
-        e_old = 0
-        while abs(e_old - eccentric_anomaly) > 1e-10:  # precision = 10 digits
-            e_old = eccentric_anomaly
-            eccentric_anomaly = mean_anomaly + e * sin(e_old)
+    # the true anomaly is the "angle" travelled (as seen from center)
+    # since the nearest point (periapsis) of the orbit
 
-        # calculate the true anomaly
-        # formular from http://en.wikipedia.org/wiki/True_anomaly
-        t_0 = cos(eccentric_anomaly) - e
-        t_1 = 1 - e * cos(eccentric_anomaly)
-        true_anomaly = acos(t_0 / t_1)  # true anomaly in range: 0 - pi
+    # mean_anomaly (in rad)-> eccentric anomaly (rad)-> true anomaly (rad)
+    # calculate the eccentric anomaly according to a formular found at
+    # http://www-spof.gsfc.nasa.gov/stargaze/Smotion.htm
+    eccentric_anomaly = mean_anomaly
+    ecc_old = 0
+    while abs(ecc_old - eccentric_anomaly) > 1e-10:  # precision = 10 digits
+        ecc_old = eccentric_anomaly
+        eccentric_anomaly = mean_anomaly + ecc * sin(ecc_old)
 
-        if mean_anomaly > pi:
-            # we are on the other side (angle > 180) of the circle
-            true_anomaly = 2 * pi - true_anomaly  # range: 0 - 2*pi
-        return true_anomaly
+    # calculate the true anomaly
+    # formular from http://en.wikipedia.org/wiki/True_anomaly
+    t_0 = cos(eccentric_anomaly) - ecc
+    t_1 = 1 - ecc * cos(eccentric_anomaly)
+    angle = acos(t_0 / t_1)  # true anomaly in range: 0 - pi
+
+    if mean_anomaly > pi:
+        # we are on the other side (angle > 180) of the circle
+        angle = 2 * pi - angle  # range: 0 - 2*pi
+
+    return angle
 
 
 def orbit_position(simorbit, simscn, time):
     """Calculate the position of the planet in the xy-plane"""
-    # a = (to BU adjusted) semi_major_axis
-    a = simorbit.semi_major_axis / simscn.length_mult
+    # sma = (to BU adjusted) semi_major_axis
+    sma = simorbit.semi_major_axis / simscn.length_mult
 
     # eccentricity = more circular (small e) or more elliptical (bigger e)
-    e = simorbit.eccentricity
+    ecc = simorbit.eccentricity
 
     # orbital period = time to complete one orbit
-    T = simorbit.orbital_period
+    period = simorbit.orbital_period
 
     time_offset = simorbit.time_offset
 
     # calculate the position
-    theta = true_anomaly(time, T, e, time_offset)
-    if e == 0:
-        # circular orbit, r = constant
-        r = a
+    theta = true_anomaly(time, period, ecc, time_offset)
+    if ecc == 0:
+        # circular orbit, distance is constant
+        dist = sma
     else:
-        # elliptical orbit, r = distance from sun (in BU)
+        # elliptical orbit, dist = distance from sun (in BU)
         # from http://www-spof.gsfc.nasa.gov/stargaze/Smotion.htm
-        r = a * (1 - e ** 2) / (1 + e * cos(theta))
+        dist = sma * (1 - ecc ** 2) / (1 + ecc * cos(theta))
 
-    x = cos(theta) * r
-    y = sin(theta) * r
-    z = 0
-    planet_loc = Vector((x, y, z))
+    pos_x = cos(theta) * dist
+    pos_y = sin(theta) * dist
+    pos_z = 0
+    position = Vector((pos_x, pos_y, pos_z))
 
-    return planet_loc
+    return position
 
 
-def orbit_rotate(other, simorbit):
+def orbit_orientation(other, simorbit):
     """Rotates a mathutils value (Vector, Euler, ...) using orbital elements.
 
     simorbit contains the needed information,
@@ -136,43 +137,38 @@ def orbit_rotate(other, simorbit):
     return other
 
 
-### Driver functions ###
-
-def eval_planet_orbit(scn_name, obj_name, index=None, time=None):
+# =============================================================================
+# Driver functions
+# =============================================================================
+def eval_planet_orbit(obj, scn_name, index=None, time=None):
     """Evaluate the planets position, used by driver.
 
-    scn_name = Name of a scene which contains the object
-    obj_name = Name of the object to simulate
+    obj = object to be simulated
+    sssim_scn = scene data
     index = index of the location channel
     time = time when to calculate, if not given use current scene time
             time is in seconds of the simulation
     returns a 3-tuple with xyz-locations or, if index given, only one component
     """
-    scn = bpy.data.scenes.get(scn_name)
-    obj = bpy.data.objects.get(obj_name)
-    if not obj or not scn:
-        errmsg = "DRIVER ERROR: Invalid obj_name ({}) or scn_name ({})"
-        print(errmsg.format(obj_name, scn_name))
-        return 0
-
-    simscn = scn.sssim_scn
     simorbit = obj.sssim_orbit
+    scn = bpy.data.scenes.get(scn_name)
+    if not scn:
+        errmsg = "DRIVER ERROR: Invalid scene name {}"
+        print(errmsg.format(scn_name))
+        return 0
+    sssim_scn = scn.sssim_scn
 
     # time = time for which to calculate the planet position, in seconds
     if time is None:
-        time = simscn.time
+        time = sssim_scn.time
 
-    planet_loc = orbit_position(simorbit, simscn, time)
+    planet_loc = orbit_position(simorbit, sssim_scn, time)
+    orbit_rot = orbit_orientation(planet_loc, simorbit)
 
-    orbit_rot = orbit_rotate(planet_loc, simorbit)
-
-    if index is None:
-        return orbit_rot
-    else:
-        return orbit_rot[index]
+    return orbit_rot if index is None else orbit_rot[index]
 
 
-def eval_planet_rotation(scn_name, obj_name, index=None, time=None):
+def eval_planet_rotation(obj, scn_name, index=None, time=None):
     """Evaluate the planets rotation, used by driver.
 
     scn_name = Name of a scene which contains the object
@@ -183,19 +179,17 @@ def eval_planet_rotation(scn_name, obj_name, index=None, time=None):
             time is in seconds of the simulation
     returns an Euler in mode ZYX or, if index given, an angle in radians
     """
-    scn = bpy.data.scenes.get(scn_name)
-    obj = bpy.data.objects.get(obj_name)
-    if not obj or not scn:
-        errmsg = "DRIVER ERROR: Invalid obj_name ({}) or scn_name ({})"
-        print(errmsg.format(obj_name, scn_name))
-        return 0
-
-    simscn = scn.sssim_scn
     simrot = obj.sssim_rotation
+    scn = bpy.data.scenes.get(scn_name)
+    if not scn:
+        errmsg = "DRIVER ERROR: Invalid scene name {}"
+        print(errmsg.format(scn_name))
+        return 0
+    sssim_scn = scn.sssim_scn
 
     # time = time in seconds, if None use current scene time
     if time is None:
-        time = simscn.time
+        time = sssim_scn.time
 
     # rotation_period is also in seconds
     rotation_period = simrot.rotation_period
@@ -219,9 +213,6 @@ def eval_planet_rotation(scn_name, obj_name, index=None, time=None):
     planet_rot.z += rot_z
 
     if simrot.relative_to_orbit and obj.sssim_obj.object_type == 'PLANET':
-        planet_rot = orbit_rotate(planet_rot, obj.sssim_orbit)
+        planet_rot = orbit_orientation(planet_rot, obj.sssim_orbit)
 
-    if index is None:
-        return planet_rot
-    else:
-        return planet_rot[index]
+    return planet_rot if index is None else planet_rot[index]

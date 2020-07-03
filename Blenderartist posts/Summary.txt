@@ -1,83 +1,61 @@
-This Addon simulates solar systems according to Kepler's laws of planetary motion. It will calculate the orbit of the simulated objects based on given parameters (the so called "orbital elements") specified in the physics tab.
+![SSSim_screenshot|690x435](upload://98Yp4IiXU20nnzz4OsAhm3L28kW.png)
+This Add-on simulates planets in a solar systems according to Kepler's laws of planetary motion. You set the orbit parameters via the physics-tab and the Add-on will calculate the orbit of the planet for you. Lengths are scaled down so that everything fits inside the scene, time can be animated to speed up or slow down the simulation.
+A custom driver animates the planets, it works only when the Add-on is enabled. You can also bake the simulation, the driver will then be replaced by keyframed animation.
 
-Screenshot:
-[ATTACH=CONFIG]226603[/ATTACH]
+**Version 0.7 for Blender 2.8**, last updated [date=2020-07-03]:
+[SolarSystemSimulator.zip|attachment](upload://tascjJnghPtxAIZPf0DIootPKhK.zip) (25.7 KB)
 
+Also available on Github:
+https://github.com/markus-ebke/SolarSystemSimulator/releases/latest
 
-The Addon (v0.5 from 17.9.2013):
-[ATTACH]226607[/ATTACH]
-
-[B]Overview:[/B]
+**Overview:**
 The Addon creates panels in three different areas:
-For global adjustments (of time and dimensions) there is a panel in the Scene-Tab:
-[LIST]
-[*]Adjust the simulation time (the property is called "Evaluation Time") with keyframes.
-[*]Change the scaling of lengths (the solar system is really big) and time (planets need long for their orbit).
-[/LIST]
+For global adjustments (time and dimensions) there is a panel in the scene-tab:
+* Animate the simulation time with keyframes.
+* Scale down lengths (because the real solar system is huge) and speed up time (to compress years into seconds).
+* Enable drawing of orbits in the 3D-Viewport.
 
-For every object there is a panel in the Physics-Tab:
-The object can have three different types (Center, Planet or Surface).
-[LIST]
-[*]A Center object is the basis for a solar system.
-[*]Planets orbit around this center or around other planets (like the Moon). The orbit and the rotation of a planet is controlled through the Orbit- and Rotation-panels.
-[*]Surface objects are the visible shell of the planets. They are just parented Mesh-Spheres which move and rotate with their planet.
-[/LIST]
+For the objects there is a panel in the physics-tab:
+A simulated object is either a center a planet or a surface.
+* a center object is the basis of the solar system (like the sun),
+* planets orbit around this center (like the Earth) or around other planets (moons),
+* surface objects are the visible shell of the planets, they are just parented meshes which move and rotate with their planet.
 
-The 3D-View Toolbar has a panel with some useful operators for making surface objects, planets and solar systems. The orbits can be drawn in the Viewport together with additional information for the active object.
+For centers and planets you can
+* set the mass of the center which is used to calculate the orbital period of the planets,
+* change the size, shape and orientation of the orbit (only for planets),
+* let the object to rotate around its axis and tilt the axis with respect to the orbital plane,
+* bake the simulation to animation curves that work without the Add-on enabled.
 
-For animating the movements and rotations a custom driver is used. You can make Animation Curves for location and rotation which are saved in the blend-file by using the Calculation-panel or the "Bake All" Operator from the Toolbar.
+There is also a panel in the 3D-Viewport sidebar (in the Tool-category) with some useful operators for quickly making solar systems.
 
-[Example file: Planets.blend]
+[details="How to let Earth orbit around the Sun"]
+1. Install the Add-on, in Blender you will find it in the Object-category.
+2. The drivers and simulation time animation have to be setup first. In the 3D-View go the the sidebar on the right, there is a panel in the Tool-tab titled "Solar System Simulator: Tools". Click the buttons labeled "Add Simulation Time F-Curve" and "Update Drivers".
+3. Now we can start with the solar system. In the toolbar click the "Create Center"-button and in the popup window set the name to "Sun", "Mass (kg)" to 2 with "Mass Exponent" set to 30 (the Sun's mass is about 2*10^30 kg). The Sun needs about 25 days for one rotation around its axis, set "Rotation Period (in seconds)" to 25 * 24 * 60 * 60, Blender will do the calculation. Also enable "Create Surface" and set "Radius (in km)" to 6.955, "Radius Exponent" to 5 (the Sun's radius is about 695,500 km). Then click "OK".
+4. The operator will create an empty (named "Sun") together with a Mesh-Sphere (named "Sun_surface"). Now we add the Earth. Make sure the "Sun"-Empty is selected and use the "Create Planet"-button from the toolbar.
+5. In the popup window the "Center" property will be set to the active object (in this case "Sun"). Set the name of the planet to "Earth". The Earth's mass is about 5.98*10^24 kg, the distance from the Sun is about 149.6 million km (149.6*10^6 km). The Earth's rotation period is 1 day = 86,400 seconds and its radius is 6,370 km (= 6.37*10^3 km). Click OK and a new planet far away from the Sun will be created, you have to zoom out to see it.
+6. When you start the animation (spacebar) the earth will orbiting around the sun. You can also enable the "Draw Orbit" property in the toolbar to see the orbit.
+7. To refine Earth's orbit select it (the empty, not the mesh Earth_surface) and go to the physics-tab. Make the orbit slightly elliptic by setting eccentricity to 0.02 in the "Orbit"-section of the panel. Also the rotation axis of the Earth is tilted by 23.4°, in the "Rotation"-section adjust the "Axis Tilt"-property.
+8. At this scale the earth is really hard to see. To make it bigger you can go to the scene-tab and increase the "Planet Size Multiplier" to 10-100. This will artifically increase the radius of the surface without changing the distance between the Earth and the Sun. You can also change the scale of the solar system with the "Length Exponent" setting.
+9. To add more surfaces to the Earth (e.g. a cloud layer slightly bigger than 6,370 km) use the "Create Surface"-button from the Toolbar.
+10. If you want to save the orbit within the blend-file, use the "Bake All" operator from the toolbar. It will create location and rotation F-Curves for every simulated object.
+[/details]
 
+Using information from Wikipedia and NASA I setup the 8 planets in our solar system:
+[Planets.blend|attachment](upload://cwhThHXYpXinaVoXSM5oD3kC27w.blend) (304.6 KB)
+![Planets_screenshot|690x407](upload://rQnnBcxoIsGyRCz3jPHebWaylmc.png)
 
-[B]Short manual for creating the Earth orbiting the Sun:[/B]
-[LIST=1]
-[*]Install the Addon, in Blender you will find it in the object category.
-[*]Every Solar System needs a center object. Go to the 3D-View Toolbar and hit the "Create Center"-button.
-[*]In the popup window set "Center Name" to "Sun", "Mass (kg)" to 2, "Mass Exponent" to 30 (The Sun's mass is about 2*10^30 kg). The Sun needs 25 days for one rotation around its axis, set "Rotation Period (in seconds)" to 25 * 24 * 60 * 60, Blender will do the calculation. Enable "Create Surface" and set "Radius (in km)" to 6.955, "Radius Exponent" to 5 (the Sun's radius is about 695,500 km = 6.955*10^5 km).
-[*]The operator will create one empty object (named "Sun") at the origin together with a Mesh-Sphere (named "Sun_surface"). Make sure the "Sun"-Empty is the active object (tip: alt-rightmousebutton on the Sun) and use the "Create Planet"-button from the toolbar.
-[*]In the popup window the "Center" property will be set to the active object (in this case "Sun"). The name for the planet will be "Earth". The Earth's mass is about 5.98*10^24 kg, the distance from the Sun is about 149.6 million km. Set "Distance (in km)" to 149.6 and leave the exponent at 6. The Earth's rotation period is 1 day = 86,400 seconds and its radius is 6,370 km (= 6.37*10^3 km). A new planet far away from the Sun will be created, you have to zoom out to see it.
-[*]In the Toolbar hit the button "Add Time FCurve". When you start the animation with alt-a, the Earth will move around the Sun. Enable the "Draw Orbit" property in the toolbar to see the orbit.
-[*]To refine the orbit of the Earth select it (the empty not the mesh object) and go to the physics-tab. To make the Earth's orbit slightly elliptic go to the "Orbit"-panel and set the "Eccentricity"-property to 0.02. Also the rotation axis of the Earth is tilted by 23.4°. In the "Rotation"-panel adjust the "Axis Tilt"-property.
-[*]To add more surfaces to the Earth (e.g. a cloud layer slightly bigger than 6,370 km) use the "Create Surface"-button from the Toolbar. If you want to UV-Unwrap the meshes better use a UV-Sphere as Surface Mesh Type.
-[*]To change the scaling of the solar system go to the scene-tab. The "Solar System Simulator: Scene Data"-Panel contains global settings like the Simulation Time (animate the "Evaluation Time" property for speeding up or slowing down the simulation) and properties for scaling of lengths and time. The "Planet Size Multiplier" increases the size of the surfaces without changing the distance between planets and center.
-[*]If you want to save the orbit in the file, use the "Bake All" operator from the toolbar. For every simulation object it will create a location and rotation FCurve which is saved in the blend-file.
-[/LIST]
+[details="Useful Links"]
+Information about orbits and planets from Wikipedia:
+https://en.wikipedia.org/wiki/Kepler%27s_laws_of_planetary_motion
+https://en.wikipedia.org/wiki/Orbital_elements
+https://en.wikipedia.org/wiki/List_of_gravitationally_rounded_objects_of_the_Solar_System
 
-
-[B]Notes:[/B]
-[LIST]
-[*]The Empties created by the operators from the toolbar act as a backbone. They are the animated objects, the surfaces are just parented to them.
-[*]The addon will add two custom drivers to blenders driver namespace. If you rename a simulation object or save a blend-file with a simulation using the driver and reopen it later, it will not work anymore.
-To fix this activate the addon (if not already) and use the "Update Drivers" button from the toolbar or the Scene-tab. This will update the namespace and all drivers of simulated objects in the current scene. 
-[*]You can create FCurves for individual objects from the "Calculation"-panel in the physics-tab. First you have to disable the driver then you can use the "SSSim To F-Curve" button.
-"Cyclic" works correctly only if the "Evaluation Time" property of the scene is linear, if you have set custom keyframes, better disable it and set start and end frame. 
-[*]By default the "Bake All" operator from the toolbar will override the frame_step setting of each planet. This is not useful if some planets (with very elliptical orbits) need more keyframes than others.
-[*]Be careful when you rename objects, relations to other objects (surfaces, planets around this planet) may get invalid.
-[*]You can set the orbital period or the rotation period in frames. In case of the orbital period you have to activate "Use User Orbital Period" first.
-[*]In case of problems have a look at the console (On Windows: Window -> Toggle System Console), some information is printed there.
-[/LIST]
-
-
-[B]Useful Links:[/B]
-
-Information about Orbits and Planets from Wikipedia:
-http://en.wikipedia.org/wiki/Kepler%27s_laws_of_planetary_motion
-http://en.wikipedia.org/wiki/Orbital_elements
-http://en.wikipedia.org/wiki/List_of_gravitationally_rounded_objects_of_the_Solar_System
-
-NASA Jet Propulsion Laboratory (JPL) Solar System Dynamics:
-http://ssd.jpl.nasa.gov/
+More exact numbers for the orbital elements of planets in our solar system:
+https://ssd.jpl.nasa.gov/?planet_pos
 
 Textures:
 http://planetpixelemporium.com/planets.html
 http://visibleearth.nasa.gov/view_cat.php?categoryID=1484
-
-Earth with Blender Internal Render:
-http://www.blenderguru.com/videos/create-a-realistic-earth/
-
-Planets with Cycles and OSL: (thanks to zeffi)
-http://fbbdev.wordpress.com/2012/09/15/cycles-osl/
-
-
-I'm new to Python and the Blender API and I got most my information from Wikipedia. If you have suggestions on how to improve the addon, make it easier to use, fix some lines of codes or just found an interesting website about planets, post it here.
+[/details]

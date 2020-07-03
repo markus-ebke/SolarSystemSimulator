@@ -18,41 +18,73 @@
 
 # <pep8 compliant>
 
-# Blenderartist Thread:
-# http://blenderartists.org/forum/showthread.php?267761-Solar-System-Simulator-WIP
-
 bl_info = {
     "name": "Solar System Simulator",
-    "description": "Simulation of solar systems using Kepler's laws of planetary motion",
+    "description": "Simulate solar systems using Kepler's laws",
     "author": "Markus Ebke",
-    "version": (0, 6),
-    "blender": (2, 72, 0),
-    "location": "Properties > Physics (for objects); Properties > Scene (global settings); 3DView Toolbar",
-    "warning": "In developement, version from 2014-11-05",
-    "wiki_url": "",
+    "version": (0, 7),
+    "blender": (2, 80, 0),
+    "location": "Properties > Physics; Properties > Scene; 3D-View Toolbar",
+    "warning": "",
+    "doc_url": "https://blenderartists.org/t/solar-system-simulator/553099",
     "tracker_url": "",
     "category": "Object"}
 
+"""
+# support reloading
 if "bpy" in locals():
-    import imp
-    imp.reload(calculation)
-    imp.reload(operators)
-    imp.reload(panels)
-    imp.reload(properties)
-    imp.reload(opengl)
-    print("Reloaded SSSim modules")
-else:
-    from . import calculation, operators, panels, properties, opengl
-    print("Imported SSSim modules")
+    import importlib
+    if "calculation" in locals():
+        importlib.reload(calculation)
+    if "operators" in locals():
+        importlib.reload(operators)
+    if "panels" in locals():
+        importlib.reload(panels)
+    if "properties" in locals():
+        importlib.reload(properties)
+    if "opengl" in locals():
+        importlib.reload(opengl)
+"""
 
 import bpy
 from bpy.props import PointerProperty
 
+from . import calculation, operators, panels, properties
+print("Imported Solar System Simulator modules")
 
-### Registration ###
+
+# =============================================================================
+# Registration
+# =============================================================================
+classes = (
+    operators.SCENE_OT_add_sim_time_fcurve,
+    operators.OBJECT_OT_sssim_to_fcurve,
+    operators.OBJECT_OT_sssim_clear_fcurve,
+    operators.SCENE_OT_update_sssim_drivers,
+    operators.OBJECT_OT_sssim_create_center,
+    operators.OBJECT_OT_sssim_create_planet,
+    operators.OBJECT_OT_sssim_create_surface,
+    operators.OBJECT_OT_sssim_bake_all,
+    operators.OBJECT_OT_sssim_bake_clear,
+    panels.SSSIM_PT_object,
+    panels.SSSIM_PT_orbit,
+    panels.SSSIM_PT_rotation,
+    panels.SSSIM_PT_surface,
+    panels.SSSIM_PT_calculation,
+    panels.SSSIM_PT_scene,
+    panels.SSSIM_PT_tools,
+    properties.SSSIMObject,
+    properties.SSSIMOrbit,
+    properties.SSSIMRotation,
+    properties.SSSIMCalculation,
+    properties.SSSIMSurface,
+    properties.SSSIMScene,
+)
+
 
 def register():
-    bpy.utils.register_module(__name__)
+    for cla in classes:
+        bpy.utils.register_class(cla)
 
     obj = bpy.types.Object
     obj.sssim_obj = PointerProperty(type=properties.SSSIMObject)
@@ -62,7 +94,7 @@ def register():
     obj.sssim_surface = PointerProperty(type=properties.SSSIMSurface)
     bpy.types.Scene.sssim_scn = PointerProperty(type=properties.SSSIMScene)
 
-    # We need to add custom drivers for the location and rotation
+    # add custom drivers for the location and rotation to driver namespace
     drv = bpy.app.driver_namespace
     drv["eval_planet_orbit"] = calculation.eval_planet_orbit
     drv["eval_planet_rotation"] = calculation.eval_planet_rotation
@@ -73,14 +105,14 @@ def register():
 def unregister():
     bpy.types.PHYSICS_PT_add.remove(panels.physics_panel)
 
-    # Remove the drivers if any
+    # remove the drivers if any
     drv = bpy.app.driver_namespace
     if "eval_planet_orbit" in drv:
         del drv["eval_planet_orbit"]
     if "eval_planet_rotation" in drv:
         del drv["eval_planet_rotation"]
 
-    # Remove drawing callbacks in all scenes
+    # remove drawing callbacks in all scenes
     for scn in bpy.data.scenes:
         scn.sssim_scn.draw_orbit = False
 
@@ -92,7 +124,8 @@ def unregister():
     del obj.sssim_surface
     del bpy.types.Scene.sssim_scn
 
-    bpy.utils.unregister_module(__name__)
+    for cla in classes:
+        bpy.utils.unregister_class(cla)
 
 
 if __name__ == "__main__":
