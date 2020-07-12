@@ -54,8 +54,10 @@ sssim_surface (type: SSSIMSurface)
     - radius_exp
 
 TODO:
+- 3D-Viewport panel in "Tools" or "SSSim" category?
+- Add drivers and simulation time F-Curve automatically via bpy.app.handlers.load_post?
 - help text, activate for every panel with (?) in upper corner
-- option: "advanced settings"?
+- option for "advanced settings"?
 
 LINKS:
 http://www-spof.gsfc.nasa.gov/stargaze/Smap.htm

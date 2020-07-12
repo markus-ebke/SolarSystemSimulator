@@ -1,6 +1,6 @@
 # SolarSystemSimulator - A Blender Add-on for simulating solar systems
 
-![Screenshot](./Blenderartist_posts/SSSim_screenshot.png)
+![Screenshot](./Blenderartist/SSSim_screenshot.png)
 
 [Blender](http://www.blender.org) is a free and open source 3D computer graphics software toolset.
 This Add-on provides some tools to create a solar system in Blender (one central sun with several orbiting planets, possibly with further orbiting moons).
