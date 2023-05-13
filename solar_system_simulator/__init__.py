@@ -22,7 +22,7 @@ bl_info = {
     "name": "Solar System Simulator",
     "description": "Simulate solar systems using Kepler's laws",
     "author": "Markus Ebke",
-    "version": (0, 7),
+    "version": (0, 8),
     "blender": (2, 80, 0),
     "location": "Properties > Physics; Properties > Scene; 3D-View Toolbar",
     "warning": "",
@@ -50,7 +50,7 @@ import bpy
 from bpy.props import PointerProperty
 
 from . import calculation, operators, panels, properties
-print("Imported Solar System Simulator modules")
+print("Successfully imported Solar System Simulator modules")
 
 
 # =============================================================================

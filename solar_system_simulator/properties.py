@@ -166,32 +166,32 @@ class SSSIMScene(bpy.types.PropertyGroup):
 
     sim_time: FloatProperty(
         name="Simulation Time",
-        description="Main control of the simulation time (in seconds).",
+        description="Main control of the simulation time (in seconds)",
         min=0, default=0)
 
     time_exp: IntProperty(
         name="Time Exponent",
         description=("Base-10 exponent for converting simulation time "
-                     "to Blender time."),
+                     "to Blender time"),
         min=0, max=10, default=6,
         update=update_objects)
 
     length_exp: IntProperty(
         name="Length Exponent",
-        description="Base-10 exponent for scaling lengths to Blender units.",
+        description="Base-10 exponent for scaling lengths to Blender units",
         min=0, max=10, default=6,
         update=update_objects)
 
     planet_size_mult: IntProperty(
         name="Planet Size Multiplier",
         description=("Increase the size of planet surfaces "
-                     "to make them better visible."),
+                     "to make them better visible"),
         min=1, soft_max=1000, default=1,
         update=update_objects)
 
     draw_orbit: BoolProperty(
         name="Draw Orbit",
-        description="Activate/deactivate drawing orbits in the viewport.",
+        description="Activate/deactivate drawing orbits in the viewport",
         default=False,
         update=update_handle)
 
@@ -257,15 +257,15 @@ class SSSIMObject(bpy.types.PropertyGroup):
         update=update_relations)
     show_info: BoolProperty(
         name="Show Info",
-        description="Show additional info.",
+        description="Show additional info",
         default=True)
     mass_mantissa: FloatProperty(
         name="Mass (kg)",
-        description="Mass of the object (in kilogram).",
+        description="Mass of the object (in kilogram)",
         soft_min=0.001, soft_max=1000, default=1)
     mass_exp: IntProperty(
         name="Mass Exponent",
-        description="Base-10 exponent of the mass.",
+        description="Base-10 exponent of the mass",
         soft_min=0, soft_max=50, default=24)
 
     # ---------------- Read-only properties ----------------
@@ -289,68 +289,67 @@ class SSSIMOrbit(bpy.types.PropertyGroup):
     # ------------------------------------------------
     center_name: StringProperty(
         name="Center Object",
-        description="Name of the object at the orbit's focal point.",
+        description="Name of the object at the orbit's focal point",
         update=update_relations)
 
     # shape and size
     eccentricity: FloatProperty(
         name="Eccentricity",
-        description="The ellipticalness of the orbit, 0 equals a circle.",
+        description="The ellipticalness of the orbit, 0 equals a circle",
         min=0, max=0.999, default=0)
     distance_mantissa: FloatProperty(
         name="Semi-Major Axis (km)",
-        description=("The distance to the center, in a circle: Radius, "
-                     "in an ellipse: half of the longest axis."),
+        description=("The distance to the center, in a circle: radius, "
+                     "in an ellipse: half of the longest axis"),
         soft_min=0.001, soft_max=1000, default=1)
     distance_exp: IntProperty(
         name="Length Exponent",
-        description="Base-10 exponent of the distance.",
+        description="Base-10 exponent of the distance",
         soft_min=0, soft_max=12, default=6)
 
     # orientation of the orbital plane
     inclination: FloatProperty(
         name="Inclination",
-        description="Tilt against the global xy-plane.",
+        description="Tilt against the global xy-plane",
         min=-pi / 2, max=3 / 2 * pi,
         unit='ROTATION')
     asc_node: FloatProperty(
         name="Ascending Node",
         description=("Longitude of the ascending node "
-                     "(= rotates of the orbit around the global z-axis)."),
+                     "(= rotates of the orbit around the global z-axis)"),
         min=0, max=2 * pi,
         unit='ROTATION')
     arg_periapsis: FloatProperty(
         name="Argument of Periapsis",
         description=("Argument of periapsis (= rotates the nearest point in "
-                     "the orbit around the local z-axis)."),
+                     "the orbit around the local z-axis)"),
         min=0, max=2 * pi,
         unit='ROTATION')
 
     # position
     time_offset: FloatProperty(
         name="Time Offset",
-        description=("Timeshift the starting point by the given percentage "
-                     "of the orbital period."),
-        min=0, max=1,
-        subtype='PERCENTAGE')
+        description=("Timeshift the starting point by the given fraction "
+                     "of the orbital period"),
+        min=0, max=1)
 
     # orbital period specified by user
     override_period: BoolProperty(
         name="Override Period",
         description=("Use a custom orbital period, otherwise gravity will "
-                     "determine the period."),
+                     "determine the period"),
         default=False)
     use_frames: BoolProperty(
         name="Use Frames",
-        description="Input orbital period in frames.",
+        description="Input orbital period in frames",
         default=True)
     override_period_seconds: FloatProperty(
         name="Orbital Period (seconds)",
-        description="Custom orbital period in seconds.",
+        description="Custom orbital period in seconds",
         min=0, default=10000000)
     override_period_frames: FloatProperty(
         name="Orbital Period (frames)",
-        description="Custom orbital period in frames.",
+        description="Custom orbital period in frames",
         min=0, default=50)
 
     # ---------------- Read-only properties ----------------
@@ -432,21 +431,21 @@ class SSSIMOrbit(bpy.types.PropertyGroup):
     def _orbital_period_calc(self):
         obj = self.id_data
         center_object = obj.sssim_orbit.center_object
-        if center_object:
-            if self.override_period:
-                if self.use_frames:
-                    scn = bpy.context.scene
-                    time_mult = scn.sssim_scn.time_mult
-                    return self.override_period_frames * time_mult
+        if not center_object:
+            return 0  # no center, no orbit
 
+        if self.override_period:
+            if self.use_frames:
+                scn = bpy.context.scene
+                fps = scn.render.fps / scn.render.fps_base
+                return self.override_period_frames * scn.sssim_scn.time_mult / fps
+            else:
                 return self.override_period_seconds
 
-            axis = self.semi_major_axis
-            mass = obj.sssim_obj.mass
-            cmass = center_object.sssim_obj.mass
-            return calculation.orbital_period(axis, mass, cmass)
-
-        return 0  # no center, no orbit
+        axis = self.semi_major_axis
+        mass = obj.sssim_obj.mass
+        cmass = center_object.sssim_obj.mass
+        return calculation.orbital_period(axis, mass, cmass)
 
     orbital_period: FloatProperty(
         get=_orbital_period_calc)
@@ -492,49 +491,50 @@ class SSSIMRotation(bpy.types.PropertyGroup):
     # ------------------------------------------------
     use_rotation: BoolProperty(
         name="Use Rotation",
-        description="Enable rotation of the object around its axis.",
+        description="Enable rotation of the object around its axis",
         default=False,
         update=update_relations)
     use_frames: BoolProperty(
         name="Use Frames",
-        description="Input rotation period in frames instead of seconds.",
+        description="Input rotation period in frames instead of seconds",
         default=False,
         update=update_relations)
     period_frames: FloatProperty(
         name="Rotation Period (frames)",
-        description="Time in frames for one rotation.",
+        description="Time in frames for one rotation",
         min=0, default=100)
     period_seconds: FloatProperty(
         name="Rotation Period (seconds)",
-        description="Time in seconds for one rotation.",
+        description="Time in seconds for one rotation",
         min=0, default=86400)
     axis_tilt: FloatProperty(
         name="Axis Tilt",
-        description="Tilt of the rotation axis.",
+        description="Tilt of the rotation axis",
         min=0, max=pi, default=0,
         unit='ROTATION')
     axis_direction: FloatProperty(
         name="Tilt Direction",
-        description="Direction of tilting.",
+        description="Direction of tilting",
         min=0, max=2 * pi, default=0,
         unit='ROTATION')
     relative_to_orbit: BoolProperty(
         name="Relative to Orbit",
-        description="Orient the rotation axis relative to the orbital plane.",
+        description="Orient the rotation axis relative to the orbital plane",
         default=True)
 
     # ---------------- Read-only properties ----------------
 
     # the planet's rotation period in simulation seconds
     def _rot_period_get(self):
-        if self.use_rotation:
-            if self.use_frames:
-                scn = bpy.context.scene
-                return self.period_frames * scn.sssim_scn.time_mult
+        if not self.use_rotation:
+            return 0  # no rotation
 
-            return self.period_seconds
+        if self.use_frames:
+            scn = bpy.context.scene
+            fps = scn.render.fps / scn.render.fps_base
+            return self.period_frames * scn.sssim_scn.time_mult / fps
 
-        return 0  # no rotation
+        return self.period_seconds
 
     rotation_period: FloatProperty(
         get=_rot_period_get)
@@ -543,6 +543,7 @@ class SSSIMRotation(bpy.types.PropertyGroup):
     def _rot_period_frames_calc(self):
         if self.use_rotation and self.use_frames:
             return self.period_frames
+
         scn = bpy.context.scene
         return self.rotation_period / scn.sssim_scn.time_mult
 
@@ -564,26 +565,26 @@ class SSSIMCalculation(bpy.types.PropertyGroup):
     # ------------------------------------------------
     use_driver: BoolProperty(
         name="Use Driver",
-        description="Use driver for calculation of orbit and rotation.",
+        description="Use driver for calculation of orbit and rotation",
         default=True,
         update=update_relations)
     cyclic: BoolProperty(
         name="Cyclic",
-        description="Add cyclic F-Curve modifier to repeat the motion.",
+        description="Add cyclic F-Curve modifier to repeat the motion",
         default=True)
     frame_start: IntProperty(
         name="Start Frame",
-        description="First frame for the calculation.",
+        description="First frame for the calculation",
         default=1,
         update=check_calc_frames)
     frame_end: IntProperty(
         name="End Frame",
-        description="Last frame for the calculation.",
+        description="Last frame for the calculation",
         default=100,
         update=check_calc_frames)
     frame_step: IntProperty(
         name="Frame Step",
-        description="Size of timestep between calculated positions.",
+        description="Size of timestep between calculated positions",
         min=1, default=20)
 
     # ---------------- Read-only properties ----------------
@@ -673,13 +674,13 @@ class SSSIMSurface(bpy.types.PropertyGroup):
     # ------------------------------------------------
     parent_name: StringProperty(
         name="Parent Object",
-        description="Name of the object as the surface's parent.",
+        description="Name of the object as the surface's parent",
         update=update_parent)
 
     calc_size: BoolProperty(
         name="Calculate Size",
         description=("Calculate the size of the object instead of "
-                     "using the current size."),
+                     "using the current size"),
         default=False,
         update=reset_size)
 
@@ -691,12 +692,12 @@ class SSSIMSurface(bpy.types.PropertyGroup):
 
     radius_mantissa: FloatProperty(
         name="Radius (in km)",
-        description="The radius of the surface.",
+        description="The radius of the surface",
         soft_min=0.001, soft_max=1000, default=1,
         update=update_size)
     radius_exp: IntProperty(
         name="Exponent",
-        description="Base-10 exponent of the radius.",
+        description="Base-10 exponent of the radius",
         soft_min=0, soft_max=8, default=3,
         update=update_size)
 

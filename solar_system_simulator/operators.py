@@ -436,28 +436,28 @@ class OBJECT_OT_sssim_create_center(bpy.types.Operator):
 
     center_name: StringProperty(
         name="Center Name",
-        description="Name of the center.",
+        description="Name of the center",
         default="Center")
 
     mass_mantissa: FloatProperty(
         name="Mass (kg)",
-        description="Mass of the center (in kilogram).",
+        description="Mass of the center (in kilogram)",
         soft_min=0.001, soft_max=1000, default=1)
 
     mass_exp: IntProperty(
         name="Mass Exponent",
-        description="Base-10 exponent of the mass.",
+        description="Base-10 exponent of the mass",
         soft_min=0, soft_max=50, default=27)
 
     # Rotation
     use_rotation: BoolProperty(
         name="Use Rotation",
-        description="Make the center rotate around its axis.",
+        description="Make the center rotate around its axis",
         default=True)
 
     rotation_period: FloatProperty(
         name="Rotation Period (in seconds)",
-        description="Time for one to rotation in seconds.",
+        description="Time for one to rotation in seconds",
         soft_min=1, default=86400)
 
     # Surfaces
@@ -470,7 +470,7 @@ class OBJECT_OT_sssim_create_center(bpy.types.Operator):
                ('ICOSPHERE', "Icosphere", "Icosphere surface"),
                ),
         description=("Type of mesh, UV spheres are better for unwrapping, "
-                     "Icospheres have an even distribution of vertices."),
+                     "Icospheres have an even distribution of vertices"),
         default='ICOSPHERE')
 
     subdivisions: IntProperty(
@@ -480,11 +480,12 @@ class OBJECT_OT_sssim_create_center(bpy.types.Operator):
 
     radius_mantissa: FloatProperty(
         name="Radius (in km)",
+        description="The radius of the surface",
         soft_min=0.001, soft_max=1000, default=0.5)
 
     radius_exp: IntProperty(
         name="Radius Exponent",
-        description="Base-10 exponent of the radius.",
+        description="Base-10 exponent of the radius",
         soft_min=0, soft_max=8, default=6)
 
     def execute(self, context):
@@ -555,43 +556,43 @@ class OBJECT_OT_sssim_create_planet(bpy.types.Operator):
 
     center_name: StringProperty(
         name="Center",
-        description="Name of the center object.")
+        description="Name of the center object")
 
     planet_name: StringProperty(
         name="Planet Name",
-        description="Name of the new planet.",
+        description="Name of the new planet",
         default="Planet")
 
     mass_mantissa: FloatProperty(
         name="Mass (kg)",
-        description="Mass of the planet in kilogram.",
+        description="Mass of the planet in kilogram",
         soft_min=0.001, soft_max=1000, default=1)
 
     mass_exp: IntProperty(
         name="Mass Exponent",
-        description="Base-10 exponent of the mass.",
+        description="Base-10 exponent of the mass",
         soft_min=0, soft_max=50, default=24)
 
     # Orbit
     distance_mantissa: FloatProperty(
         name="Distance (in km)",
-        description="Distance to the center object in kilometers.",
+        description="Distance to the center object in kilometers",
         soft_min=0, soft_max=1000, default=10)
 
     distance_exp: IntProperty(
         name="Length Exponent",
-        description="Base-10 exponent of the distance.",
+        description="Base-10 exponent of the distance",
         soft_min=0, soft_max=12, default=6)
 
     # Rotation
     use_rotation: BoolProperty(
         name="Use Rotation",
-        description="If the planet rotates.",
+        description="If the planet rotates",
         default=True)
 
     rotation_period: FloatProperty(
         name="Rotation Period (in seconds)",
-        description="Time for one to rotation in seconds.",
+        description="Time for one to rotation in seconds",
         soft_min=1, default=86400)
 
     # Surface
@@ -604,21 +605,22 @@ class OBJECT_OT_sssim_create_planet(bpy.types.Operator):
                ('ICOSPHERE', "Icosphere", "Icosphere surface"),
                ),
         description=("Type of mesh, UV spheres are better for unwrapping, "
-                     "Icospheres have an even distribution of vertices."),
+                     "Icospheres have an even distribution of vertices"),
         default='ICOSPHERE')
 
     subdivisions: IntProperty(
         name="Subdivisions",
-        description="1 = coarse mesh, 7 = dense but round mesh.",
+        description="1 = coarse mesh, 7 = dense but round mesh",
         min=1, max=7, default=3)
 
     radius_mantissa: FloatProperty(
         name="Radius (in km)",
+        description="The radius of the surface",
         soft_min=0.001, soft_max=1000, default=0.5)
 
     radius_exp: IntProperty(
         name="Radius Exponent",
-        description="Base-10 exponent of the radius.",
+        description="Base-10 exponent of the radius",
         soft_min=0, soft_max=8, default=6)
 
     def execute(self, context):
@@ -716,7 +718,7 @@ class OBJECT_OT_sssim_create_surface(bpy.types.Operator):
 
     parent_name: StringProperty(
         name="Parent Name",
-        description="Name of the parent center or planet object.")
+        description="Name of the parent center or planet object")
 
     mesh_type: EnumProperty(
         name="Mesh Type",
@@ -724,21 +726,22 @@ class OBJECT_OT_sssim_create_surface(bpy.types.Operator):
                ('ICOSPHERE', "Icosphere", "Icosphere surface"),
                ),
         description=("Type of Mesh, UV spheres are better for unwrapping, "
-                     "Icospheres have an even distribution of vertices."),
+                     "Icospheres have an even distribution of vertices"),
         default='ICOSPHERE')
 
     subdivisions: IntProperty(
         name="Subdivisions",
-        description="1 = coarse mesh, 7 = dense but round mesh.",
+        description="1 = coarse mesh, 7 = dense but round mesh",
         min=1, max=7, default=3)
 
     radius_mantissa: FloatProperty(
         name="Radius (in km)",
+        description="The radius of the surface",
         soft_min=0.001, soft_max=1000, default=0.5)
 
     radius_exp: IntProperty(
         name="Radius Exponent",
-        description="Base-10 exponent of the radius.",
+        description="Base-10 exponent of the radius",
         soft_min=0, soft_max=8, default=6)
 
     def execute(self, context):

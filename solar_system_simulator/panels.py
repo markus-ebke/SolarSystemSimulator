@@ -96,20 +96,20 @@ class SSSIM_PT_scene(bpy.types.Panel):
             box.label(text=err_text, icon='ERROR')
             box.operator("scene.add_sim_time_fcurve", icon='FCURVE')
 
-        time_text = "Time: {:.2f} s"
+        time_text = "Time: {:,.2f} s"
         layout.label(text=time_text.format(simscn.time), icon='TIME')
 
         row = layout.row(align=True)
         row.prop(simscn, "sim_time")
         row.prop(simscn, "time_exp", slider=True)
 
-        time_scale_text = "Time Conversion: 1 Blender Second = {0:.0f} s"
+        time_scale_text = "Time Conversion: 1 Blender Second = {0:,.0f} s"
         layout.label(text=time_scale_text.format(simscn.time_mult))
 
         layout.separator()
 
         layout.prop(simscn, "length_exp", slider=True)
-        len_scale_text = "Length Conversion: 1 Blender Unit = {0:.0f} km"
+        len_scale_text = "Length Conversion: 1 Blender Unit = {0:,.0f} km"
         layout.label(text=len_scale_text.format(simscn.length_mult))
 
         layout.prop(simscn, "planet_size_mult")

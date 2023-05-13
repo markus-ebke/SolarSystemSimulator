@@ -25,7 +25,6 @@ draw_3d_callback is the function used as SpaceView3D draw handler.
 
 from math import degrees, cos
 
-import bgl
 import blf
 import gpu
 from gpu_extras.batch import batch_for_shader
@@ -64,20 +63,24 @@ def draw_3d_callback(self, context):
     # drawing shader
     shader = gpu.shader.from_builtin('3D_UNIFORM_COLOR')
     shader.bind()
-    bgl.glEnable(bgl.GL_BLEND)
+    gpu.state.blend_set("ALPHA")
+
+    # default settings
+    default_point_size = 1  # there is not gpu.state.point_size_get()
+    default_line_width = gpu.state.line_width_get()
 
     # draw info for every sssim object
     for obj in vl.objects:
-        if obj.sssim_obj.use_sssim:
+        if obj.sssim_obj.use_sssim and obj.visible_get():
             if obj.sssim_obj.object_type == 'PLANET':
                 show_orbit(obj)
             if obj.sssim_obj.object_type == 'CENTER':
                 show_center_info(obj)
 
     # restore opengl defaults
-    bgl.glPointSize(1)
-    bgl.glLineWidth(1)
-    bgl.glDisable(bgl.GL_BLEND)
+    gpu.state.point_size_set(default_point_size)
+    gpu.state.line_width_set(default_line_width)
+    gpu.state.blend_set("NONE")
 
 
 def draw_2d_callback(self, context):
@@ -208,7 +211,7 @@ def show_true_anomaly(obj, center, periapsis_time, period):
         text = "True anomaly: {}°".format(round(angle, 2))
         # the text position should be inside the arc
         # between the center and the middle point of the arc
-        midarc = orbit_position(obj, time_since_periapsis / 2)
+        midarc = orbit_position(obj, periapsis_time + time_since_periapsis / 2)
         text_pos = center_loc + midarc / 2
 
         draw_text(text, text_pos, align="CENTER")
@@ -409,7 +412,7 @@ def draw_point(position, size=5, color=(1.0, 0.2, 0.2, 1.0)):
     """Draw single red point"""
 
     # bgl.glEnable(bgl.GL_POINT_SMOOTH)  # TODO fix
-    bgl.glPointSize(size)
+    gpu.state.point_size_set(size)
     shader.uniform_float("color", color)
     batch = batch_for_shader(shader, 'POINTS', {"pos": [position]})
     batch.draw(shader)
@@ -424,7 +427,7 @@ def draw_line(points, width=2, color=(1.0, 1.0, 1.0, 1.0), closed=False):
     # GALAHAD: 'Sir Galahad of Camelot'.
     # BRIDGEKEEPER: What... is your line width?
     # GALAHAD: width.
-    bgl.glLineWidth(width)
+    gpu.state.line_width_set(width)
 
     # BRIDGEKEEPER: What... is your favorite color?
     # GALAHAD: bgl.glColor4f(*color). No, shader.unif-- auuuuuuuugh!

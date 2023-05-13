@@ -32,3 +32,9 @@ Markus Ebke, 2018-10-04
 - Update for new Blender 2.80 API
 - Adjust UI
 - Update forum post, screenshots and blend-files
+
+**0.8 (2023-05-13)**
+- Fixed minor bugs in the layout and display
+- When overriding the orbital or rotation period with a period in frames, the period in seconds did not correct for the scene fps
+- When drawing the orbit, the true anomaly text now accounts for sssim_orbit.time_offset
+- Checked Add-on with newest Blender version 3.5
