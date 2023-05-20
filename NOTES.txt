@@ -56,11 +56,16 @@ sssim_surface (type: SSSIMSurface)
 TODO:
 - 3D-Viewport panel in "Tools" or "SSSim" category?
 - Add drivers and simulation time F-Curve automatically via bpy.app.handlers.load_post?
-- help text, activate for every panel with (?) in upper corner
-- option for "advanced settings"?
+- Help text: activate for every panel with (?) in upper corner
+- Add option for "advanced settings"?
+- Switch order of "Ascending Node" and "Argument of Periapsis" (research the usual convention)
+- See https://danielk.developer.irf.se/pyorb/ for more features:
+	- Implement parabolic and hyperbolic trajectories (use EnumProperty for type "circular", "elliptical", "parabolic", "hyperbolic"?)
+	- Add toggle (EnumProperty) for alternative input: specify periapsis (and eccentricity) instead of semi-major axis (and eccentricity), works better for e >= 1 orbits
+	- Input cartesian coordinates, i.e. specify (x, y, z, vx, vy, vz, t0), but convert to kepler elements
 
 LINKS:
 http://www-spof.gsfc.nasa.gov/stargaze/Smap.htm
 http://www-spof.gsfc.nasa.gov/stargaze/Skeplaws.htm
-
 http://en.wikipedia.org/wiki/Orbital_elements
+https://orbital-mechanics.space/intro.html
