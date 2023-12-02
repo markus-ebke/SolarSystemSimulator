@@ -61,7 +61,7 @@ def draw_3d_callback(self, context):
     rv3d = context.space_data.region_3d
 
     # drawing shader
-    shader = gpu.shader.from_builtin('3D_UNIFORM_COLOR')
+    shader = gpu.shader.from_builtin('UNIFORM_COLOR')
     shader.bind()
     gpu.state.blend_set("ALPHA")
 
@@ -164,7 +164,7 @@ def show_orbit_extra_info(obj):
         # show periapsis with distance
         peri_pos = center_loc + orbit_position(obj, periapsis_time)
         draw_point(peri_pos, size=10)
-        draw_line((center_loc, peri_pos), color=(1.0, 1.0, 0.5, 1.0))
+        draw_line([center_loc, peri_pos], color=(1.0, 1.0, 0.5, 1.0))
         text = "Periapsis: {:,} km".format(round(simorbit.periapsis))
         draw_text(text, peri_pos)
 
@@ -172,13 +172,13 @@ def show_orbit_extra_info(obj):
         time = periapsis_time + period / 2
         apo_pos = center_loc + orbit_position(obj, time)
         draw_point(apo_pos, size=10)
-        draw_line((center_loc, apo_pos), color=(1.0, 0.8, 0.5, 1.0))
+        draw_line([center_loc, apo_pos], color=(1.0, 0.8, 0.5, 1.0))
         text = "Apoapsis: {:,} km".format(round(simorbit.apoapsis))
         draw_text(text, apo_pos)
     else:
         # draw radius text between center and starting position
         pos = orbit_position(obj, time=0)
-        draw_line((center_loc, center_loc + pos))
+        draw_line([center_loc, center_loc + pos])
         text = "Radius: {:,} km".format(round(simorbit.semi_major_axis))
         draw_text(text, center_loc + 0.8 * pos)
 
@@ -302,11 +302,11 @@ def show_rotation_angles(obj):
         # the normal is drawn in blue, just like the z-axis
         col = (0.0, 0.0, 1.0, 1.0)
         up = obj_loc + orbit_normal * radius
-        draw_line((obj_loc, up), color=col)
+        draw_line([obj_loc, up], color=col)
 
         # draw the Rotation Axis
         axis_vec = tilt_rotate(tilt)
-        draw_line((obj_loc, obj_loc + axis_vec * radius))
+        draw_line([obj_loc, obj_loc + axis_vec * radius])
         draw_text("Rotation Axis", obj_loc + axis_vec * radius)
 
         # draw the direction where the rotation axis is pointing
@@ -410,19 +410,45 @@ def show_angle(angle, radius, rotate_func, center_loc, color, text):
 
 def draw_point(position, size=5, color=(1.0, 0.2, 0.2, 1.0)):
     """Draw single red point"""
-
-    # bgl.glEnable(bgl.GL_POINT_SMOOTH)  # TODO fix
+    # [PART III]
+    # BRIDGEKEEPER: Stop! Who would cross the Bridge of Death must answer me
+    #               these questions three, ere the other side he see.
+    # LANCELOT: Ask me the questions, bridgekeeper. I am not afraid.
+    # BRIDGEKEEPER: What... is your name?
+    # LANCELOT: My name is 'Sir Lancelot of Camelot'.
+    # BRIDGEKEEPER: What... is your point size?
+    # LANCELOT: The size of my point is 5.
     gpu.state.point_size_set(size)
+
+    # BRIDGEKEEPER: What... is your favorite color?
+    # LANCELOT: Blue.
     shader.uniform_float("color", color)
+
+    # BRIDGEKEEPER: Right. Off you go.
+    # LANCELOT: Oh, thank you. Thank you very much.
     batch = batch_for_shader(shader, 'POINTS', {"pos": [position]})
     batch.draw(shader)
 
-    # bgl.glDisable(bgl.GL_POINT_SMOOTH)  # TODO fix
+    # ROBIN: That's easy!
+    # BRIDGEKEEPER: Stop! Who approacheth the Bridge of Death must answer
+    #               me these questions three, ere the other side he see.
+    # ROBIN: Ask me the questions, bridgekeeper. I'm not afraid.
+    # BRIDGEKEEPER: What... is your name?
+    # ROBIN: 'Sir Robin of Camelot'.
+    # BRIDGEKEEPER: What... is your quest?
+    # ROBIN: To draw points on the screen.
+    # BRIDGEKEEPER: How do you draw large points as disks and not as squares?
+    # ROBIN: I don't know that, there is no builtin shader for smooth points!
+    #        Auuuuuuuugh!
+    # TODO fix this
+    # bgl.glEnable(bgl.GL_POINT_SMOOTH)
+    # [set point size, shader and batch, draw batch]
+    # bgl.glDisable(bgl.GL_POINT_SMOOTH)
 
 
 def draw_line(points, width=2, color=(1.0, 1.0, 1.0, 1.0), closed=False):
     """Draw polyline, points = [(x1, y1, z1), (x2, y2, z2),...]"""
-    # [PART V]
+    # [PART IV]
     # BRIDGEKEEPER: Stop! What... is your name?
     # GALAHAD: 'Sir Galahad of Camelot'.
     # BRIDGEKEEPER: What... is your line width?
@@ -433,8 +459,9 @@ def draw_line(points, width=2, color=(1.0, 1.0, 1.0, 1.0), closed=False):
     # GALAHAD: bgl.glColor4f(*color). No, shader.unif-- auuuuuuuugh!
     shader.uniform_float("color", color)
 
-    mode = 'LINE_LOOP' if closed else 'LINE_STRIP'
-    batch = batch_for_shader(shader, mode, {"pos": points})
+    if closed:
+        points.append(points[0])
+    batch = batch_for_shader(shader, 'LINE_STRIP', {"pos": points})
     batch.draw(shader)
 
 
@@ -467,7 +494,7 @@ def draw_text(text, position, align="LEFT"):
 def _draw_text_2d(text, position, align="LEFT"):
     """Draw text at given screen position aligned to the left"""
 
-    # [PART VI]
+    # [PART V]
     # BRIDGEKEEPER: Hee hee heh. Stop! What... is your name?
     # ARTHUR: It is 'Arthur', King of the Britons.
     # BRIDGEKEEPER: What... is your quest?
@@ -480,7 +507,7 @@ def _draw_text_2d(text, position, align="LEFT"):
         position.x -= text_width / 2
 
     blf.position(font_id, position.x, position.y, 0)
-    blf.size(font_id, 12, 72)
+    blf.size(font_id, 12)
 
     # BRIDGEKEEPER: What... is the OpenGL command for drawing text?
     # ARTHUR: What do you mean? Blender's bfl module can do that for me!

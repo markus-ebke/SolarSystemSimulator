@@ -28,6 +28,10 @@ Markus Ebke, 2018-10-04
 
 # Changelog (incomplete)
 
+**0.9 (2023-12-02)**
+- Remove gpu shader name and operator context override functionality that was deprecated in Blender 3.2
+- Check Add-on with Blender 4.0
+
 **0.8 (2023-05-13)**
 - Fixed minor bugs in the layout and display
 - Checked Add-on with Blender 3.5

@@ -817,8 +817,6 @@ class OBJECT_OT_sssim_bake_all(bpy.types.Operator):
         # handy name for the operator
         sim_bake = bpy.ops.object.sssim_to_fcurve
         # the operator works on the active object, we will override the context
-        # but first we need a copy of the current context
-        override_context = bpy.types.Context.copy(context)
 
         n = 0
         for obj in scn.objects:
@@ -829,17 +827,17 @@ class OBJECT_OT_sssim_bake_all(bpy.types.Operator):
             if obj.sssim_calc.use_driver:
                 obj.sssim_calc.use_driver = False
 
-            # now override the active object
-            override_context['object'] = obj
-            if sim_bake.poll(override_context):
-                print("Baking {}".format(obj.name))
-                result = sim_bake(override_context)
-                n += 1
+            # now override the active object and bake
+            with context.temp_override(object=obj):
+                if sim_bake.poll():
+                    print("Baking {}".format(obj.name))
+                    result = sim_bake()
+                    n += 1
 
-                # check if everything was OK
-                if result == {'CANCELLED'}:
-                    print("Object {} failed to bake".format(obj.name))
-                    return {'CANCELLED'}
+                    # check if everything was OK
+                    if result == {'CANCELLED'}:
+                        print("Object {} failed to bake".format(obj.name))
+                        return {'CANCELLED'}
 
         print("Baked {} objects".format(n))
         return {'FINISHED'}
@@ -853,17 +851,16 @@ class OBJECT_OT_sssim_bake_clear(bpy.types.Operator):
     def execute(self, context):
         scn = context.scene
         sim_clear = bpy.ops.object.sssim_clear_fcurve
-        override = bpy.types.Context.copy(context)
 
         num_obj = 0
         for obj in scn.objects:
             if not obj.sssim_obj.use_sssim:
                 continue
 
-            override['object'] = obj
-            if sim_clear.poll(override):
-                sim_clear(override)
-                num_obj += 1
+            with context.temp_override(object=obj):
+                if sim_clear.poll():
+                    sim_clear()
+                    num_obj += 1
 
             obj.sssim_calc.use_driver = True
         print("Cleared Bake of {} objects".format(num_obj))
