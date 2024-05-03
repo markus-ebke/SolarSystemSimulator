@@ -61,6 +61,7 @@ classes = (
     operators.OBJECT_OT_sssim_to_fcurve,
     operators.OBJECT_OT_sssim_clear_fcurve,
     operators.SCENE_OT_update_sssim_drivers,
+    operators.OBJECT_OT_add_orbit_curve,
     operators.OBJECT_OT_sssim_create_center,
     operators.OBJECT_OT_sssim_create_planet,
     operators.OBJECT_OT_sssim_create_surface,

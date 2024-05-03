@@ -62,8 +62,10 @@ class SSSIM_PT_tools(bpy.types.Panel):
         row.operator("scene.sssim_bake_all", text="Bake All", icon='GRAPH')
         row.operator("scene.sssim_bake_clear", text="Clear All", icon='DRIVER')
 
+        row = layout.row(align=True)
         simscn = context.scene.sssim_scn
-        layout.prop(simscn, "draw_orbit", toggle=True, icon='FORCE_CURVE')
+        row.prop(simscn, "draw_orbit", toggle=True, icon='FORCE_CURVE')
+        row.operator("object.sssim_add_orbit_curve", icon='CURVE_BEZCIRCLE')
 
         layout.operator("scene.update_sssim_drivers", icon='FILE_REFRESH')
 

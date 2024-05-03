@@ -19,6 +19,7 @@
 # <pep8 compliant>
 
 from itertools import chain
+from math import sqrt
 
 import bpy
 from bpy.props import (
@@ -423,6 +424,81 @@ class SCENE_OT_update_sssim_drivers(bpy.types.Operator):
         self.report({'INFO'}, msg)
 
         return {'FINISHED'}
+
+
+class OBJECT_OT_add_orbit_curve(bpy.types.Operator):
+    """Create Bezier curves that match the orbits of the selected planets"""
+    bl_idname = "object.sssim_add_orbit_curve"
+    bl_label = "Add Orbit Curves"
+    bl_options = {'REGISTER', 'UNDO'}
+
+    bevel_depth: FloatProperty(
+        name="Bevel Depth",
+        description="Radius of the Bevel Geometry",
+        min=0.0)
+
+    @classmethod
+    def poll(cls, context):
+        return bool(context.selected_objects)
+
+    def execute(self, context):
+        simscn = context.scene.sssim_scn
+        for obj in context.selected_objects:
+            if not obj.sssim_obj.use_sssim:
+                continue
+
+            # can only add orbits to planets
+            if not obj.sssim_obj.object_type == 'PLANET':
+                continue
+            simorbit = obj.sssim_orbit
+
+            # planet without a center has no orbit
+            if not simorbit.center_object:
+                continue
+
+            # create a new Bezier circle curve
+            bpy.ops.curve.primitive_bezier_circle_add()
+            curve = context.active_object
+            curve.name = "{}_orbit".format(obj.name)
+            curve.data.bevel_depth = self.bevel_depth
+
+            # switch to edit mode, set handle type so that scaling is proportional
+            bpy.ops.object.mode_set(mode='EDIT')
+            bpy.ops.curve.handle_type_set(type='ALIGNED')
+
+            # resize circle to ellipse and translate focal point to origin
+            ecc = simorbit.eccentricity
+            scale = simorbit.semi_major_axis / simscn.length_mult
+            bpy.ops.transform.resize(value=(scale, sqrt(1 - ecc**2) * scale, scale))
+            bpy.ops.transform.translate(value=(-ecc * scale, 0, 0))
+
+            # switch back to object mode
+            bpy.ops.object.mode_set(mode='OBJECT')
+
+            # perform rotations to match orientation of the orbit
+            bpy.ops.transform.rotate(value=simorbit.inclination, orient_axis='X',
+                                     orient_type='GLOBAL',
+                                     constraint_axis=(True, False, False))
+            bpy.ops.transform.rotate(value=simorbit.asc_node, orient_axis='Z',
+                                     orient_type='GLOBAL',
+                                     constraint_axis=(False, False, True))
+            bpy.ops.transform.rotate(value=simorbit.arg_periapsis, orient_axis='Z',
+                                     orient_type='LOCAL',
+                                     constraint_axis=(False, False, True))
+
+            # parent orbit curve to the center object (i.e. copy location)
+            add_orbit_constraint(curve, simorbit.center_object)
+
+        return {'FINISHED'}
+
+    def invoke(self, context, event):
+        wm = context.window_manager
+        return wm.invoke_props_dialog(self, width=200)
+
+    def draw(self, context):
+        layout = self.layout
+
+        layout.prop(self, "bevel_depth")
 
 
 # =============================================================================
