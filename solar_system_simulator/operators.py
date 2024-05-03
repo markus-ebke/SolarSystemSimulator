@@ -110,6 +110,9 @@ def add_orbit_constraint(child_obj, parent_obj):
         orbitcon.use_scale_y = False
         orbitcon.use_scale_z = False
 
+        # clear inverse
+        orbitcon.inverse_matrix.identity()
+
         msg = "Constraint {} to {}".format(child_obj.name, parent_obj.name)
     else:
         msg = "Constraint of {} adjusted".format(child_obj.name)

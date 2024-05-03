@@ -22,7 +22,7 @@ bl_info = {
     "name": "Solar System Simulator",
     "description": "Simulate solar systems using Kepler's laws",
     "author": "Markus Ebke",
-    "version": (0, 9),
+    "version": (0, 10),
     "blender": (3, 2, 0),
     "location": "Properties > Physics; Properties > Scene; 3D-View Toolbar",
     "warning": "",
