@@ -26,7 +26,12 @@ Also some of my code might be crap, but this is your problem now :P.
 Markus Ebke, 2018-10-04
 
 
-# Changelog (incomplete)
+# Changelog
+
+**0.10 (2024-05-03)**
+- Add orbit curves: The orbits can now be converted to a Bézier curve which can then be rendered.
+- Fix bug with location constraint when center object is not at the origin (need to clear inverse transform).
+- Check Add-on with Blender 4.1.
 
 **0.9 (2023-12-02)**
 - Remove gpu shader name and operator context override functionality that was deprecated in Blender 3.2
