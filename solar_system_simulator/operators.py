@@ -452,6 +452,7 @@ class OBJECT_OT_add_orbit_curve(bpy.types.Operator):
 
             # can only add orbits to planets
             if not obj.sssim_obj.object_type == 'PLANET':
+                # TODO if object is a surface, add curve to parent
                 continue
             simorbit = obj.sssim_orbit
 

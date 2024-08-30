@@ -1,0 +1,32 @@
+schema_version = "1.0.0"
+
+# Extension info
+id = "solar_system_simulator"
+name = "Solar System Simulator"
+tagline = "Simulate solar systems using Kepler's laws"
+version = "0.10.1"
+blender_version_min = "3.2.0"
+maintainer = "Markus Ebke"
+type = "add-on"
+
+# Optional link to documentation, support, source files, etc
+website = "https://blenderartists.org/t/solar-system-simulator/553099"
+
+# Optional list defined by Blender and server, see:
+# https://docs.blender.org/manual/en/dev/advanced/extensions/tags.html
+tags = ["Object", "Physics"]
+
+# License conforming to https://spdx.org/licenses/ (use "SPDX: prefix)
+# https://docs.blender.org/manual/en/dev/advanced/extensions/licenses.html
+license = [
+  "SPDX:GPL-3.0-or-later",
+]
+
+# Optional: build settings.
+# https://docs.blender.org/manual/en/dev/advanced/extensions/command_line_arguments.html#command-line-args-extension-build
+# [build]
+# paths_exclude_pattern = [
+#   "__pycache__/",
+#   "/.git/",
+#   "/*.zip",
+# ]

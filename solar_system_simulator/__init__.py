@@ -18,17 +18,7 @@
 
 # <pep8 compliant>
 
-bl_info = {
-    "name": "Solar System Simulator",
-    "description": "Simulate solar systems using Kepler's laws",
-    "author": "Markus Ebke",
-    "version": (0, 10),
-    "blender": (3, 2, 0),
-    "location": "Properties > Physics; Properties > Scene; 3D-View Toolbar",
-    "warning": "",
-    "doc_url": "https://blenderartists.org/t/solar-system-simulator/553099",
-    "tracker_url": "",
-    "category": "Object"}
+
 
 """
 # support reloading
@@ -50,7 +40,7 @@ import bpy
 from bpy.props import PointerProperty
 
 from . import calculation, operators, panels, properties
-print("Successfully imported Solar System Simulator modules")
+# print("Solar System Simulator: Successfully imported all submodules")
 
 
 # =============================================================================
