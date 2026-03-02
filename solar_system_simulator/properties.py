@@ -49,7 +49,7 @@ def update_relations(self, context):
     obj = self.id_data
 
     if verbose:
-        print("Update relations of", self)
+        print("Update relations of {}".format(self))
         print("Orbit of {}:".format(obj.name))
 
     simobj = obj.sssim_obj

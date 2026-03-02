@@ -22,7 +22,7 @@ from math import ceil, degrees
 
 import bpy
 
-from .operators import has_location_fcurve, has_rotation_fcurve
+from .operators import has_sim_time_fcurve, has_location_fcurve, has_rotation_fcurve
 
 
 # =============================================================================
@@ -46,8 +46,7 @@ class SSSIM_PT_tools(bpy.types.Panel):
                       icon='ERROR')
             box.operator("scene.update_sssim_drivers", icon='FILE_REFRESH')
 
-        add_fcurve = bpy.ops.scene.add_sim_time_fcurve.poll()
-        if add_fcurve:
+        if not has_sim_time_fcurve(context.scene):
             box = layout.box()
             err_text = "You need to add a simulation time F-Curve"
             box.label(text=err_text, icon='ERROR')
@@ -91,8 +90,7 @@ class SSSIM_PT_scene(bpy.types.Panel):
                       icon='ERROR')
             box.operator("scene.update_sssim_drivers", icon='FILE_REFRESH')
 
-        add_fcurve = bpy.ops.scene.add_sim_time_fcurve.poll()
-        if add_fcurve:
+        if not has_sim_time_fcurve(context.scene):
             box = layout.box()
             err_text = "You need to add a simulation time F-Curve"
             box.label(text=err_text, icon='ERROR')
@@ -149,7 +147,7 @@ class SSSIM_PT_object(bpy.types.Panel):
         simobj = obj.sssim_obj
         info = simobj.show_info
 
-        if bpy.ops.scene.add_sim_time_fcurve.poll():
+        if not has_sim_time_fcurve(context.scene):
             box = layout.box()
             box.label(text="You need to add an simulation time F-Curve",
                       icon='ERROR')

@@ -63,6 +63,37 @@ TODO:
 	- Implement parabolic and hyperbolic trajectories (use EnumProperty for type "circular", "elliptical", "parabolic", "hyperbolic"?)
 	- Add toggle (EnumProperty) for alternative input: specify periapsis (and eccentricity) instead of semi-major axis (and eccentricity), works better for e >= 1 orbits
 	- Input cartesian coordinates, i.e. specify (x, y, z, vx, vy, vz, t0), but convert to kepler elements
+- Increase resolution of orbit path curve? Use Bezier circle with more than 4 nodes?
+- "Bake" the simulation for dynamically changing orbit (e.g. when keyframing orbit properties):
+```
+import bpy
+
+
+scn = bpy.context.scene
+obj = bpy.context.object
+
+# Frame range to bake
+frame_start = scn.frame_start - 1
+frame_end = scn.frame_end + 1
+frame_step = 10  # number of frames to skip forward
+
+# Compute locations via driver and save them
+stash = dict()  # mapping {frame: location vector}
+f = frame_start
+while f <= frame_end:
+    scn.frame_set(f)
+    stash[f] = obj.location.copy()
+    f += frame_step
+
+# Then remove the driver
+obj.driver_remove("location")
+
+# Now create the location keyframes
+for f, loc in stash.items():
+    obj.location = loc
+    obj.keyframe_insert(data_path="location", frame=f)
+```
+Finally, in the Graph Editor set the fcurve extrapolation mode to linear (Channel > Extrapolation Mode > Linear Extrapolation) to get the correct animation at the start and end of the scene.
 
 LINKS:
 http://www-spof.gsfc.nasa.gov/stargaze/Smap.htm

@@ -28,6 +28,7 @@ from bpy.props import (
     FloatProperty,
     StringProperty,
     EnumProperty)
+from bpy_extras import anim_utils
 
 from .calculation import eval_planet_orbit, eval_planet_rotation
 
@@ -171,35 +172,55 @@ def remove_surface(child_obj):
 # F-Curve stuff
 # =============================================================================
 
-def get_fcurve(fcurves, search_data_path, array_index=-1):
-    """Find in list fcurves the F-Curve with given data_path (and index)"""
-    for fc in fcurves:
-        if fc.data_path == search_data_path:
-            if array_index in (-1, fc.array_index):
-                return fc
-    return None
+def get_fcurves(animated_thing):
+    """Find the fcurves of the active action, if any"""
+    if not animated_thing.animation_data:
+        return None
+
+    if not animated_thing.animation_data.action:
+        return None
+
+    if bpy.app.version < (4, 4, 0):
+        fcurves = animated_thing.animation_data.action.fcurves
+    else:
+        # Blender 4.4 added slotted actions with fcurves in a channelbag,
+        # we assume that the action has only one slot and only one layer
+        # with one keyframe strip
+        act = animated_thing.animation_data.action
+        if not act.slots or not act.layers or not act.layers[0].strips:
+            return None
+
+        strip = act.layers[0].strips[0]
+        fcurves = strip.channelbag(act.slots[0], ensure=True).fcurves
+
+    return fcurves
+
+
+def has_sim_time_fcurve(scn):
+    """Find out if the scene has a simulation time F-Curve"""
+    fcurves = get_fcurves(scn)
+    if fcurves is not None:
+        return bool(fcurves.find("sssim_scn.sim_time"))
+    else:
+        return False
 
 
 def has_location_fcurve(obj):
     """Find out if the object has a location (=orbit) F-Curve"""
-    if obj.animation_data:
-        if obj.animation_data.action:
-            fcurves = obj.animation_data.action.fcurves
-            if fcurves:
-                if get_fcurve(fcurves, "location"):
-                    return True
-    return False
+    fcurves = get_fcurves(obj)
+    if fcurves is not None:
+        return any(fcurves.find("location", index=i) for i in range(3))
+    else:
+        return False
 
 
 def has_rotation_fcurve(obj):
     """Find out if the object has a rotation F-Curve"""
-    if obj.animation_data:
-        if obj.animation_data.action:
-            fcurves = obj.animation_data.action.fcurves
-            if fcurves:
-                if get_fcurve(fcurves, "rotation_euler"):
-                    return True
-    return False
+    fcurves = get_fcurves(obj)
+    if fcurves is not None:
+        return bool(fcurves.find("rotation_euler", index=2))
+    else:
+        return False
 
 
 def key_insert(fcurve, start, end, step, get_value):
@@ -234,22 +255,31 @@ class SCENE_OT_add_sim_time_fcurve(bpy.types.Operator):
     @classmethod
     def poll(cls, context):
         # if sim_time is controlled by fcurve -> return False
-        anim_data = context.scene.animation_data
-        if anim_data and anim_data.action:
-            if get_fcurve(anim_data.action.fcurves, "sssim_scn.sim_time"):
-                return False
-        return True
+        return not has_sim_time_fcurve(context.scene)
 
     def execute(self, context):
         scn = context.scene
 
-        if scn.animation_data is None:
-            scn.animation_data_create()
-
         anim_data = scn.animation_data
-        act = bpy.data.actions.new("Simulation_Time")
-        anim_data.action = act
-        time_curve = act.fcurves.new(data_path="sssim_scn.sim_time")
+        if scn.animation_data is None:
+            anim_data = scn.animation_data_create()
+
+        act = anim_data.action
+        if act is None:
+            # use existing action to keep everything clean
+            act = bpy.data.actions.get("Simulation_Time")
+            if act is None:
+                act = bpy.data.actions.new("Simulation_Time")
+            anim_data.action = act
+
+        if bpy.app.version < (4, 4, 0):
+            time_curve = act.fcurves.find("sssim_scn.sim_time")
+            if time_curve:
+                act.fcurves.remove(time_curve)
+
+            time_curve = act.fcurves.new(data_path="sssim_scn.sim_time")
+        else:
+            time_curve = act.fcurve_ensure_for_datablock(scn, "sssim_scn.sim_time")
 
         fmod = time_curve.modifiers.new("GENERATOR")
         fmod.mode = "POLYNOMIAL"
@@ -279,28 +309,41 @@ class OBJECT_OT_sssim_to_fcurve(bpy.types.Operator):
         obj = context.object
 
         # there must be a sim_time F-Curve
-        if bpy.ops.scene.add_sim_time_fcurve.poll():
+        if not has_sim_time_fcurve(scn):
             msg = "No simulation time F-Curve found, check the scene tab"
             self.report({'ERROR'}, msg)
             return {'CANCELLED'}
 
-        scn_act = scn.animation_data.action
-        sim_time_fcurve = get_fcurve(scn_act.fcurves, "sssim_scn.sim_time")
+        sim_time_fcurve = get_fcurves(scn).find("sssim_scn.sim_time")
         time_multiply = scn.sssim_scn.time_mult
 
         # set up animation data if needed
-        if obj.animation_data is None:
-            obj.animation_data_create()
         anim_data = obj.animation_data
+        if anim_data is None:
+            anim_data = obj.animation_data_create()
 
         # use existing action to keep everything clean
-        previous = bpy.data.actions.get("SSSim_%s_Action" % obj.name)
-        if previous:
-            act = previous
-        else:
-            act = bpy.data.actions.new(name="SSSim_%s_Action" % obj.name)
+        act = anim_data.action
+        if act is None:
+            act = bpy.data.actions.get("SSSim_{}_Action".format(obj.name))
+            if act is None:
+                act = bpy.data.actions.new(name="SSSim_{}_Action".format(obj.name))
+            anim_data.action = act
 
-        anim_data.action = act
+        if bpy.app.version >= (4, 4, 0):
+            if not act.slots:
+                slot = act.slots.new(id_type='OBJECT', name=obj.name)
+            slot = act.slots[0]
+            anim_data.action_slot = slot
+
+            if bpy.app.version >= (5, 0, 0):
+                anim_utils.action_ensure_channelbag_for_slot(act, slot)
+            else:
+                simcalc = obj.sssim_calc
+                if simcalc.calc_orbit:
+                    act.fcurve_ensure_for_datablock(obj, "location", index=0)
+                elif simcalc.calc_rotation:
+                    act.fcurve_ensure_for_datablock(obj, "rotation_euler", index=2)
 
         # time_func(frame) returns the time at this frame
         def time_func(frame):
@@ -308,13 +351,13 @@ class OBJECT_OT_sssim_to_fcurve(bpy.types.Operator):
 
         simcalc = obj.sssim_calc
         if simcalc.calc_orbit:
-            self.orbit_to_fcurve(act, scn, obj, time_func)
+            self.orbit_to_fcurve(scn, obj, time_func)
         if simcalc.calc_rotation:
-            self.rotation_to_fcurve(act, scn, obj, time_func)
+            self.rotation_to_fcurve(scn, obj, time_func)
 
         return {'FINISHED'}
 
-    def orbit_to_fcurve(self, act, scn, obj, get_time):
+    def orbit_to_fcurve(self, scn, obj, get_time):
         simcalc = obj.sssim_calc
         start = simcalc.real_frame_start
         end = simcalc.real_frame_end
@@ -325,11 +368,16 @@ class OBJECT_OT_sssim_to_fcurve(bpy.types.Operator):
             def value_func(frame):
                 return eval_planet_orbit(obj, scn.name, index, get_time(frame))
 
+            fcurves = get_fcurves(obj)
+            assert fcurves is not None
+
             # remove existing F-Curve if any
-            fc = get_fcurve(act.fcurves, "location", index)
+            fc = fcurves.find("location", index=index)
             if fc:
-                act.fcurves.remove(fc)
-            fc = act.fcurves.new(data_path="location", index=index)
+                fcurves.remove(fc)
+
+            # (re-)create location F-Curve
+            fc = fcurves.new(data_path="location", index=index)
 
             n = key_insert(fc, start, end, step, value_func)
 
@@ -338,7 +386,7 @@ class OBJECT_OT_sssim_to_fcurve(bpy.types.Operator):
 
         print("Created {:3} keyframes for location".format(n))
 
-    def rotation_to_fcurve(self, act, scn, obj, get_time):
+    def rotation_to_fcurve(self, scn, obj, get_time):
         def value_func(time):
             return eval_planet_rotation(obj, scn.name, 2, get_time(time))
 
@@ -349,12 +397,16 @@ class OBJECT_OT_sssim_to_fcurve(bpy.types.Operator):
         obj.rotation_euler.x = rot_x
         obj.rotation_euler.y = rot_y
 
-        # remove existing z-axis curve if any
-        fc = get_fcurve(act.fcurves, "rotation_euler", 2)
-        if fc:
-            act.fcurves.remove(fc)
+        fcurves = get_fcurves(obj)
+        assert fcurves is not None
 
-        fc = act.fcurves.new(data_path="rotation_euler", index=2)
+        # remove existing z-axis curve if any
+        fc = fcurves.find("rotation_euler", index=2)
+        if fc:
+            fcurves.remove(fc)
+
+        # (re-)create rotation F-Curve
+        fc = fcurves.new(data_path="rotation_euler", index=2)
         fc.extrapolation = 'LINEAR'
 
         simcalc = obj.sssim_calc
@@ -385,12 +437,15 @@ class OBJECT_OT_sssim_clear_fcurve(bpy.types.Operator):
         return False
 
     def execute(self, context):
-        fcurves = context.object.animation_data.action.fcurves
+        fcurves = get_fcurves(context.object)
+        assert fcurves is not None
+
         for i in range(3):
-            loc_curve = get_fcurve(fcurves, "location", i)
-            rot_curve = get_fcurve(fcurves, "rotation_euler", i)
+            loc_curve = fcurves.find("location", index=i)
             if loc_curve:
                 fcurves.remove(loc_curve)
+
+            rot_curve = fcurves.find("rotation_euler", index=i)
             if rot_curve:
                 fcurves.remove(rot_curve)
 
