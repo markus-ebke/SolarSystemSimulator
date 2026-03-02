@@ -28,6 +28,13 @@ Markus Ebke, 2018-10-04
 
 # Changelog
 
+**0.10.2 (2025-03-02)**
+- Rewrite handling of fcurves: use slotted actions that were introduced with Blender 4.4.
+- Test with Blender 4.2, 4.5 and 5.0.
+
+**0.10.1 (2024-08-31)**
+- Convert Add-on to Blender extension.
+
 **0.10 (2024-05-03)**
 - Add orbit curves: The orbits can now be converted to a Bézier curve which can then be rendered.
 - Fix bug with location constraint when center object is not at the origin (need to clear inverse transform).
