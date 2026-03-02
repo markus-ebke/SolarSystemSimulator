@@ -28,7 +28,7 @@ Markus Ebke, 2018-10-04
 
 # Changelog
 
-**0.10.2 (2025-03-02)**
+**0.10.2 (2026-03-02)**
 - Rewrite handling of fcurves: use slotted actions that were introduced with Blender 4.4.
 - Test with Blender 4.2, 4.5 and 5.0.
 
